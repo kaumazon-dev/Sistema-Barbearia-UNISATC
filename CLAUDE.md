@@ -270,19 +270,33 @@ Roteiro de demonstração, script `seed.py` com dados de exemplo, slides.
 
 | Tabela | Observação |
 |---|---|
-| `usuario` | barbeiro/admin, com papel (role) para permissões |
-| `cliente` | nome, telefone, e-mail, data de cadastro |
-| `servico` | nome, **duracao_minutos**, preço |
-| `agendamento` | cliente, usuário, data/hora início e fim, status |
-| `agendamento_servico` | N:N — um agendamento pode ter corte + barba |
+| `usuario` | admin, barbeiro **e cliente**, diferenciados por `papel` |
+| `servico` | nome, **duracao_minutos**, preço, ativo |
+| `agendamento` | `cliente_id` e `barbeiro_id` (ambos → `usuario`), início, fim, status |
+| `agendamento_servico` | N:N — um agendamento pode ter corte + barba; guarda `preco_cobrado` |
 | `produto` | nome, unidade, quantidade atual, estoque mínimo |
-| `movimentacao_estoque` | entrada/saída, quantidade, motivo, data |
+| `movimentacao_estoque` | entrada/saída, quantidade, motivo, data, responsável |
 
-Dois pontos que costumam ser esquecidos:
+Status do agendamento: `agendado`, `concluido`, `cancelado`.
+Papéis do usuário: `admin`, `barbeiro`, `cliente`.
+
+**Não existe tabela `cliente`.** O cliente faz login, então é um `usuario` com
+`papel = 'cliente'`. Consequência: `agendamento` referencia `usuario` duas vezes, uma
+como cliente e outra como barbeiro. Ao desenhar o DER, rotule as duas setas.
+
+Quatro pontos que costumam ser esquecidos:
 
 - `duracao_minutos` no serviço é o que permite calcular o fim do agendamento e detectar conflito.
+- `agendamento.fim` é **gravado**, não calculado na leitura. Isso mantém a consulta de
+  conflito simples e impede que mudar a duração de um serviço deforme agendamentos passados.
+- `agendamento_servico.preco_cobrado` guarda o preço vigente na marcação. O dashboard soma
+  essa coluna, nunca `servico.preco` — senão um reajuste reescreve o faturamento de meses
+  já fechados.
 - Nunca alterar `produto.quantidade` sem gravar a movimentação correspondente.
   O dashboard depende dessas tabelas de histórico.
+
+Valores monetários em `numeric`, nunca `float`. O requisito completo está em
+`docs/requisitos.md`.
 
 ### Schema vem de migration, não de pgAdmin
 
