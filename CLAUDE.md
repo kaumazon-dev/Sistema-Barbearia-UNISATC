@@ -126,8 +126,9 @@ barbearia/
 ├── README.md
 │
 ├── docs/
-│   ├── der.png
-│   ├── requisitos.md
+│   ├── der.dbml                  # fonte do diagrama (dbdiagram.io) — edite AQUI
+│   ├── der.png                   # exportado do .dbml, nunca editado à mão
+│   ├── requisitos.md             # RF, RNF, fora de escopo e regras de negócio
 │   └── api.md                    # contrato dos endpoints, mantido à mão
 │
 ├── backend/
@@ -192,6 +193,12 @@ barbearia/
 - `http.js` é o único lugar que conhece a URL base e o cabeçalho de autorização.
 - CSS de componente é separado de CSS de página.
 
+**Sem build, sem Node.** Decisão tomada: nada de Vite, npm ou `package.json`. O ganho
+(HMR, variável de ambiente para a URL da API) não paga o custo de trazer uma stack de
+build para três iniciantes com 11 semanas — e a estrutura é multi-página, o que exigiria
+configuração extra no Vite. A URL base por ambiente se resolve em três linhas dentro do
+`http.js`. Se for reavaliar, reavalie **no começo** da Fase 7, nunca no meio.
+
 ### Por que `extensions.py` existe
 
 As extensões são importadas por models, repositories e pela factory. Instanciá-las dentro
@@ -210,6 +217,35 @@ Escolha **um módulo** e leve-o de ponta a ponta, do banco até a tela.
 Motivo: erros de arquitetura aparecem cedo, quando ainda são baratos de corrigir, e nunca
 se chega na entrega com três camadas prontas e nada rodando.
 
+### Calendário real
+
+Entrega final: **27/11/2026**. Apresentação parcial: **25/09/2026**.
+Feature freeze: **15/11/2026**. São 11 semanas, sem folga.
+
+| Prazo | Entrega |
+|---|---|
+| 18/09 | Fase 0 fechada + migrations criando as 6 tabelas |
+| 20/09 | `base_repository`, error handlers, CORS |
+| 24/09 | Auth completa + tela de login |
+| **25/09** | **Apresentação parcial** |
+| 11/10 | CRUD de clientes (4 camadas + tela) |
+| 18/10 | CRUD de serviços (4 camadas + tela) |
+| 01/11 | Agenda completa com regra de conflito |
+| 08/11 | Estoque |
+| 15/11 | Dashboard + **feature freeze** |
+| 22/11 | Testes, responsividade, deploy |
+| **27/11** | **Entrega final** |
+
+As datas e os critérios de pronto de cada item estão no Trello, quadro
+"Sistema Barbearia — PI WEB".
+
+**Ordem de corte**, decidida com antecedência para não virar discussão em cima da hora:
+RF31 (taxa de cancelamento) → RF30 (ranking de serviços) → RF09 (histórico do cliente)
+→ RF08 (busca de cliente). Auth, agenda e estoque **não** entram na lista de corte.
+
+Depois de 15/11 nada novo entra. Funcionalidade que faltar é cortada, não adiada.
+Sistema incompleto que roda vale mais que completo que quebra na apresentação.
+
 ### Ordem recomendada
 
 **Fase 0 — Fundação (semana 1)**
@@ -227,6 +263,11 @@ Conexão com o banco. Flask-Migrate configurado e primeira migration aplicada.
 **Fase 2 — Autenticação (semana 3)**
 Cadastro e login, hash de senha, geração e validação de JWT, decorador que protege rotas.
 É a **primeira fatia vertical completa** e vira o template de todas as outras.
+
+> Esta fase é feita por **uma pessoa só**. Se três inventarem o padrão em paralelo,
+> saem três padrões e as fases seguintes herdam a bagunça. Os outros dois copiam o
+> template depois. Se alguém precisar inventar algo novo na Fase 3, o template ficou
+> incompleto — corrija na auth, não no módulo novo.
 
 **Fase 3 — Cadastros básicos (semanas 4–5)**
 CRUD de clientes e de serviços, cada um passando pelas quatro camadas.
@@ -256,7 +297,20 @@ Chart.js para os gráficos.
 **Fase 8 — Refino e deploy (semanas 10–11)**
 Testes nos services críticos (conflito de agenda, cálculo de estoque).
 Responsividade, tratamento de erro visível, README com instruções.
-Deploy: Railway ou Render (planos gratuitos suficientes).
+Deploy decidido: **front no Vercel, backend e banco no Render** (planos gratuitos).
+
+Consequências dessa escolha, que afetam o código desde a Fase 7:
+
+- Front e back ficam em **origens diferentes**. CORS deixa de ser enfeite: whitelist da
+  origem do Vercel, nunca `*`.
+- A URL base da API muda entre local e produção. Só `http.js` pode saber disso.
+  Se alguma tela chamar `fetch` direto, o dia do deploy vira caçada a URLs.
+- O Render entrega `DATABASE_URL` com prefixo `postgres://`; SQLAlchemy 2.x exige
+  `postgresql://`. Normalize no `config.py`.
+- O backend gratuito hiberna. Acordar alguns minutos antes de qualquer apresentação.
+- O banco gratuito do Render tem prazo de validade — confirmar os termos atuais.
+  O `seed.py` da Fase 9 é o plano de recuperação se ele expirar.
+- Senha do banco em produção: forte e diferente da usada no Docker local.
 
 **Fase 9 — Apresentação (semana 12)**
 Roteiro de demonstração, script `seed.py` com dados de exemplo, slides.
@@ -326,13 +380,23 @@ Modelar visualmente antes de escrever os models é válido — mas como rascunho
 ## 6. DOCKER
 
 Serviços: `db` (Postgres 18), `backend`, `frontend` (nginx).
-Lembrando que para versoes de postgresql +17 o postgresql_data fica **/var/lib/postgresql** - sem o data no final
+
+**Volume do Postgres 18:** monte em **`/var/lib/postgresql`**, sem o `/data` no final.
+A imagem 18 mudou o `PGDATA` para `/var/lib/postgresql/18/docker`. O caminho antigo
+`/var/lib/postgresql/data` vale até o Postgres 17 e não persiste nada no 18.
 
 Pontos de atenção:
 
 - Dentro da rede do Compose, o host do banco é **`db`**, não `localhost`.
   `DATABASE_URL = postgresql://user:senha@db:5432/barbearia`
-  Do pgAdmin na máquina host, é `localhost` (exige expor a porta `5432:5432`).
+- A porta exposta ao host é **`5433:5432`**, não `5432:5432`. Na máquina do Kauã existe
+  um PostgreSQL 18 instalado no Windows ocupando a 5432. Do pgAdmin, portanto:
+  `localhost:5433` é o container do projeto, `localhost:5432` é a instalação local.
+  Nomeie a conexão com a porta junto — rodar migration no container e conferir no banco
+  errado custa uma tarde.
+- As variáveis `POSTGRES_*` são lidas **apenas no primeiro boot**, quando o volume está
+  vazio. Trocar a senha no `.env` depois não tem efeito; exige `docker compose down -v`,
+  que destrói o banco.
 - O `db` precisa de **healthcheck** (`pg_isready`). Sem isso, o backend tenta conectar
   antes do Postgres aceitar conexões e quebra no start.
 - `entrypoint.sh` no backend roda `flask db upgrade` antes do CMD.
@@ -348,11 +412,25 @@ Pontos de atenção:
 - Código, variáveis e nomes de tabela em **português** (o domínio é em português).
 - Commits: `feat:`, `fix:`, `refactor:`, `docs:`, `test:`.
 - Branches: `feature/nome-da-funcionalidade`, PR para `develop`.
+  Sempre `git pull` na `develop` antes de criar branch nova.
+  `main` só recebe merge de `develop` em versão estável.
 - **Revisão cruzada obrigatória** nos PRs — sem isso as regras da seção 3 se dissolvem
   em duas semanas.
 - `docs/api.md` atualizado sempre que um endpoint mudar: quem trabalha no front precisa
   do contrato antes do endpoint existir.
 - Senha nunca em texto puro. Hash sempre por biblioteca, nunca implementado à mão.
+- Valores monetários em `numeric`/`Decimal`, nunca `float`.
+
+### Divisão de trabalho
+
+Os três fazem front, back e banco. Kauã acumula DevOps.
+
+Para isso não virar conflito de merge, **divida por módulo, não por camada**. Cada um
+leva uma fatia vertical inteira — model, repository, service, schema, rota e tela do
+mesmo domínio. Nunca "um faz todos os models, outro faz todos os services": isso põe
+três pessoas no mesmo arquivo e dilui a responsabilidade por cada regra.
+
+Exceção: a Fase 2 (auth) é feita por uma pessoa só, porque define o template.
 
 ---
 
