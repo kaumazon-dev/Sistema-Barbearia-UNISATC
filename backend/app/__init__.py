@@ -1,8 +1,11 @@
-from Flask import Flask, request, jsonify
+from flask import Flask, jsonify
 
 app = Flask(__name__)
 
-@app.route('/health', methods='GET')
-def healthcheck():
-    return jsonify({"status": "healthy"})
+
+@app.route("/health", methods=["GET"])
+def verificar_saude():
+    return jsonify({"status": "ok"})
+
+
 
