@@ -13,7 +13,7 @@ def create_app():
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)
-    cors.init_app(app)
+    cors.init_app(app, origins=app.config["CORS_ORIGINS"])
     app.register_blueprint(blueprint_inicial)
     app.register_blueprint(blueprint_health)
     registrar_error_handlers(app)
