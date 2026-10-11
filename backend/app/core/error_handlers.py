@@ -34,3 +34,31 @@ def registrar_error_handlers(app):
         app.logger.exception("Erro não tratado")
         corpo = {"erro": {"codigo": "ERRO_INTERNO", "mensagem": "Erro interno do servidor."}}
         return corpo, 500
+
+
+def _corpo_jwt(mensagem):
+    return {"erro": {"codigo": NaoAutorizada.codigo, "mensagem": mensagem}}
+
+
+def registrar_jwt_handlers(jwt):
+    """Faz os erros de token seguirem o mesmo envelope de erro da API.
+
+    Sem isto o flask-jwt-extended responde no formato dele ({"msg": "..."}), e o
+    front precisaria de um tratamento especial só para token.
+    """
+
+    @jwt.unauthorized_loader
+    def tratar_token_ausente(motivo):
+        return _corpo_jwt("Token de acesso ausente."), 401
+
+    @jwt.invalid_token_loader
+    def tratar_token_invalido(motivo):
+        return _corpo_jwt("Token de acesso inválido."), 401
+
+    @jwt.expired_token_loader
+    def tratar_token_expirado(cabecalho, conteudo):
+        return _corpo_jwt("Token de acesso expirado."), 401
+
+    @jwt.revoked_token_loader
+    def tratar_token_revogado(cabecalho, conteudo):
+        return _corpo_jwt("Token de acesso revogado."), 401
