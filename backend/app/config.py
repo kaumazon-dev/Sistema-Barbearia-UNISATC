@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 
 def normalizar_url_banco(url):
     if url is None:
@@ -8,6 +9,13 @@ def normalizar_url_banco(url):
         return "postgresql://" + url[len(busca):]
     else:
         return url
+
+def ler_minutos_expiracao_jwt(valor, padrao):
+    try:
+        minutos = int(valor)
+    except (TypeError, ValueError):
+        return padrao
+    return minutos if minutos > 0 else padrao
 
 def ler_origens_cors(valor):
     if not valor:
@@ -20,6 +28,9 @@ class Config:
     SQLALCHEMY_DATABASE_URI = normalizar_url_banco(os.environ.get("DATABASE_URL"))
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     CORS_ORIGINS = ler_origens_cors(os.environ.get("CORS_ORIGINS"))
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(
+        minutes=ler_minutos_expiracao_jwt(os.environ.get("JWT_EXPIRA_MINUTOS"), 60)
+    )
 
 class DevConfig(Config):
     DEBUG = True
@@ -43,6 +54,8 @@ class ProdConfig(Config):
             raise RuntimeError("Variavel SQLALCHEMY_DATABASE_URI com valor nulo")
         if not self.SECRET_KEY:
             raise RuntimeError("Variavel SECRET_KEY com valor nulo")
+        if not self.JWT_SECRET_KEY:
+            raise RuntimeError("Variavel JWT_SECRET_KEY com valor nulo")
         if not self.CORS_ORIGINS:
             raise RuntimeError("Variavel CORS_ORIGINS com valor nulo")
         if "*" in self.CORS_ORIGINS:

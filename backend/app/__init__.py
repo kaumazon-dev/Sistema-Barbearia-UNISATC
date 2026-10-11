@@ -4,7 +4,8 @@ from app.config import configuracoes
 from app.extensions import db, migrate, jwt, cors
 from app.api.v1 import blueprint_inicial
 from app.api.health import blueprint_health
-from app.core.error_handlers import registrar_error_handlers
+from app.core.error_handlers import registrar_error_handlers, registrar_jwt_handlers
+from app import models  # noqa: F401
 
 def create_app():
     app = Flask(__name__)
@@ -17,5 +18,6 @@ def create_app():
     app.register_blueprint(blueprint_inicial)
     app.register_blueprint(blueprint_health)
     registrar_error_handlers(app)
+    registrar_jwt_handlers(jwt)
 
     return app
