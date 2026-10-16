@@ -12,7 +12,7 @@ from app.core.security import LIMITE_BYTES_SENHA
 from app.models.usuario import PAPEIS
 
 
-def _limpar_entrada(dados):
+def limpar_entrada(dados):
     if not isinstance(dados, dict):
         return dados
     dados = dict(dados)
@@ -37,7 +37,7 @@ class UsuarioCadastroSchema(Schema):
 
     @pre_load
     def normalizar(self, dados, **kwargs):
-        return _limpar_entrada(dados)
+        return limpar_entrada(dados)
 
     @validates("senha")
     def validar_tamanho_em_bytes(self, senha, **kwargs):
@@ -53,7 +53,7 @@ class LoginSchema(Schema):
 
     @pre_load
     def normalizar(self, dados, **kwargs):
-        return _limpar_entrada(dados)
+        return limpar_entrada(dados)
 
 
 class UsuarioSchema(Schema):

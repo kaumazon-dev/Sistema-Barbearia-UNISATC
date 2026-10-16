@@ -55,7 +55,7 @@ As mensagens de erro de validação do Marshmallow vêm em inglês (texto padrã
 
 ## Endpoints
 
-Ainda não há endpoints de negócio. Documentar aqui cada endpoint antes de implementá-lo: método, rota, corpo de entrada, resposta de sucesso e erros possíveis.
+Documentar aqui cada endpoint antes de implementá-lo: método, rota, corpo de entrada, resposta de sucesso e erros possíveis.
 
 ---
 
@@ -202,5 +202,254 @@ Resposta `200`: lista de objetos de usuário.
 | 403 | `ACESSO_NEGADO` | Autenticado, mas o papel no token não é `admin` |
 | 422 | `DADOS_INVALIDOS` | `papel` fora de `admin`, `barbeiro` e `cliente` |
 
-Ainda sem paginação. A Fase 3 precisa decidir isso antes de a base de clientes
-crescer.
+Sem paginação: é uma rota administrativa de poucos registros. A listagem que
+cresce, a de clientes, é paginada (ver `GET /clientes`).
+
+---
+
+# Clientes (Fase 3)
+
+Cliente **não tem tabela própria**: é um registro de `usuario` com
+`papel = "cliente"` (ver DER). Por estas rotas, admin e barbeiro simplesmente não
+existem: `GET /clientes/<id>` de um barbeiro devolve 404.
+
+Cliente nunca é apagado de fato. `DELETE` só desativa (`ativo = false`), porque o
+histórico de agendamentos e o dashboard dependem do registro (RF06). Cliente
+desativado não consegue fazer login.
+
+| Rota | Papel exigido |
+|---|---|
+| `GET /clientes` | `admin` ou `barbeiro` |
+| `GET /clientes/<id>` | `admin` ou `barbeiro` |
+| `POST /clientes` | `admin` |
+| `PUT /clientes/<id>` | `admin` |
+| `DELETE /clientes/<id>` | `admin` |
+
+Barbeiro só lê: precisa escolher o cliente ao marcar horário (Fase 4).
+
+Todas as rotas respondem `401 NAO_AUTENTICADO` sem token e `403 ACESSO_NEGADO`
+com papel errado.
+
+O objeto de cliente é o mesmo objeto de usuário da autenticação.
+
+## Paginação
+
+Listagens paginadas aceitam os parâmetros de consulta:
+
+| Parâmetro | Padrão | Regra |
+|---|---|---|
+| `pagina` | `1` | inteiro ≥ 1 |
+| `por_pagina` | `20` | inteiro de 1 a 100 |
+
+E respondem sempre no envelope:
+
+```json
+{
+  "itens": [ ... ],
+  "pagina": 1,
+  "por_pagina": 20,
+  "total": 41,
+  "paginas": 3
+}
+```
+
+Página além da última devolve `itens` vazio, não erro. Parâmetro vazio
+(`?busca=`) é tratado como ausente e parâmetros desconhecidos são ignorados.
+
+## GET /clientes
+
+Lista paginada, ordenada por nome.
+
+| Parâmetro | Regra |
+|---|---|
+| `busca` | opcional. Procura no nome **ou** no telefone, sem diferenciar maiúsculas (RF08). `%` e `_` são tratados como texto |
+| `ativo` | opcional, `true` ou `false`. Ausente traz ativos e inativos |
+| `pagina`, `por_pagina` | ver Paginação |
+
+Exemplo: `GET /api/v1/clientes?busca=joão&ativo=true&pagina=1`
+
+Resposta `200`: envelope de paginação com objetos de cliente em `itens`.
+
+| Status | `codigo` | Quando |
+|---|---|---|
+| 422 | `DADOS_INVALIDOS` | `pagina` ou `por_pagina` fora da faixa, `ativo` não booleano |
+
+## GET /clientes/&lt;id&gt;
+
+Resposta `200`: objeto de cliente.
+
+| Status | `codigo` | Quando |
+|---|---|---|
+| 404 | `NAO_ENCONTRADO` | Id não existe ou não é de um cliente |
+
+## POST /clientes
+
+Cadastro feito pelo admin. Mesmo corpo e mesmas regras de `POST /auth/register`
+(`nome`, `email`, `senha`, `telefone`); o papel é sempre `cliente`.
+
+Resposta `201`: objeto de cliente.
+
+| Status | `codigo` | Quando |
+|---|---|---|
+| 409 | `CONFLITO` | E-mail já cadastrado |
+| 422 | `DADOS_INVALIDOS` | Mesmas regras do cadastro público |
+
+## PUT /clientes/&lt;id&gt;
+
+Atualização parcial: só os campos enviados mudam.
+
+| Campo | Tipo | Regra |
+|---|---|---|
+| `nome` | string | 3 a 120 caracteres |
+| `email` | string | formato de e-mail, até 160, único |
+| `telefone` | string ou `null` | até 20 caracteres |
+| `ativo` | boolean | `true` reativa um cliente desativado |
+
+`senha` e `papel` **não** são aceitos: viram 422.
+
+```json
+{ "telefone": "48988887777" }
+```
+
+Resposta `200`: objeto de cliente atualizado.
+
+| Status | `codigo` | Quando |
+|---|---|---|
+| 404 | `NAO_ENCONTRADO` | Id não existe ou não é de um cliente |
+| 409 | `CONFLITO` | E-mail já usado por outro usuário |
+| 422 | `DADOS_INVALIDOS` | Campo inválido ou desconhecido |
+
+## DELETE /clientes/&lt;id&gt;
+
+Desativa o cliente (exclusão lógica). Repetir em cliente já desativado não é erro.
+
+Resposta `204` sem corpo.
+
+| Status | `codigo` | Quando |
+|---|---|---|
+| 404 | `NAO_ENCONTRADO` | Id não existe ou não é de um cliente |
+
+O histórico de agendamentos do cliente (RF09) entra na Fase 4, junto com a
+tabela `agendamento`.
+
+---
+
+# Serviços (Fase 3)
+
+| Rota | Papel exigido |
+|---|---|
+| `GET /servicos` | qualquer usuário autenticado |
+| `GET /servicos/<id>` | qualquer usuário autenticado |
+| `POST /servicos` | `admin` |
+| `PUT /servicos/<id>` | `admin` |
+| `DELETE /servicos/<id>` | `admin` |
+
+Leitura é aberta a todos os papéis porque o cliente escolhe os serviços ao marcar
+horário. **Quem não é admin só enxerga serviço ativo**: o filtro `ativo` é
+ignorado e um serviço inativo responde 404.
+
+Objeto de serviço:
+
+```json
+{
+  "id": 1,
+  "nome": "Corte",
+  "duracao_minutos": 30,
+  "preco": "35.90",
+  "ativo": true
+}
+```
+
+**`preco` sai como string**, sempre com duas casas. Número em JSON vira `float`
+no JavaScript e erra centavos (RNF09). O front deve exibir a string como está ou
+converter só para formatar, nunca para somar.
+
+Serviço nunca é apagado de fato: agendamentos antigos apontam para ele. Mudar
+preço ou duração não altera agendamentos já marcados, porque o preço cobrado e o
+horário de fim ficam gravados no agendamento (RN02, RN03).
+
+## GET /servicos
+
+Lista sem paginação (poucos registros), ordenada por nome.
+
+| Parâmetro | Regra |
+|---|---|
+| `ativo` | opcional, `true` ou `false`. Só vale para admin |
+
+Resposta `200`: lista de objetos de serviço.
+
+## GET /servicos/&lt;id&gt;
+
+Resposta `200`: objeto de serviço.
+
+| Status | `codigo` | Quando |
+|---|---|---|
+| 404 | `NAO_ENCONTRADO` | Id não existe, ou serviço inativo e quem pede não é admin |
+
+## POST /servicos
+
+| Campo | Tipo | Obrigatório | Regra |
+|---|---|---|---|
+| `nome` | string | sim | 2 a 120 caracteres, após remover espaços das pontas |
+| `duracao_minutos` | inteiro | sim | 1 a 480. `30.5` ou `"30"` são recusados |
+| `preco` | string ou número | sim | 0 a 99999999.99, no máximo 2 casas decimais. Prefira string: `"35.90"` |
+
+`35.999` é recusado em vez de arredondado: mais de duas casas quase sempre é erro
+de digitação.
+
+```json
+{ "nome": "Corte", "duracao_minutos": 30, "preco": "35.90" }
+```
+
+Resposta `201`: objeto de serviço, criado ativo.
+
+| Status | `codigo` | Quando |
+|---|---|---|
+| 422 | `DADOS_INVALIDOS` | Campo faltando, fora da faixa ou desconhecido |
+
+## PUT /servicos/&lt;id&gt;
+
+Atualização parcial com os mesmos campos do POST, mais `ativo` (boolean) para
+reativar.
+
+```json
+{ "preco": "40.00" }
+```
+
+Resposta `200`: objeto de serviço atualizado.
+
+| Status | `codigo` | Quando |
+|---|---|---|
+| 404 | `NAO_ENCONTRADO` | Id não existe |
+| 422 | `DADOS_INVALIDOS` | Campo inválido ou desconhecido |
+
+## DELETE /servicos/&lt;id&gt;
+
+Desativa o serviço (exclusão lógica). Serviço desativado não pode entrar em
+agendamento novo (RF12). A regra já está em
+`ServicoService.buscar_ativos_para_agendamento`, que o agendamento da Fase 4 deve
+usar.
+
+Resposta `204` sem corpo.
+
+| Status | `codigo` | Quando |
+|---|---|---|
+| 404 | `NAO_ENCONTRADO` | Id não existe |
+
+---
+
+# Testes
+
+```
+docker compose exec backend python -m pytest
+```
+
+Os testes de integração (`tests/integration`) usam um banco separado, definido
+em `DATABASE_URL_TEST`. Ele precisa existir antes da primeira execução:
+
+```
+docker compose exec db createdb -U barbearia barbearia_test
+```
+
+As tabelas são criadas e apagadas pelos próprios testes. Nunca aponte
+`DATABASE_URL_TEST` para o banco de desenvolvimento.
