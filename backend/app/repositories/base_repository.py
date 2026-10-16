@@ -22,3 +22,16 @@ class BaseRepository:
     def delete(self, entidade):
         db.session.delete(entidade)
         db.session.commit()
+
+    def desfazer(self):
+        db.session.rollback()
+
+    def paginar(self, consulta, pagina, por_pagina):
+        """Executa a consulta em paginas. Devolve (itens, total).
+
+        error_out=False: pagina alem do fim devolve lista vazia em vez de 404.
+        """
+        resultado = db.paginate(
+            consulta, page=pagina, per_page=por_pagina, error_out=False
+        )
+        return resultado.items, resultado.total
