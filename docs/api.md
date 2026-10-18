@@ -426,15 +426,201 @@ Resposta `200`: objeto de serviço atualizado.
 ## DELETE /servicos/&lt;id&gt;
 
 Desativa o serviço (exclusão lógica). Serviço desativado não pode entrar em
-agendamento novo (RF12). A regra já está em
-`ServicoService.buscar_ativos_para_agendamento`, que o agendamento da Fase 4 deve
-usar.
+agendamento novo (RF12). A regra fica em
+`ServicoService.buscar_ativos_para_agendamento`, usada pelo agendamento.
 
 Resposta `204` sem corpo.
 
 | Status | `codigo` | Quando |
 |---|---|---|
 | 404 | `NAO_ENCONTRADO` | Id não existe |
+
+---
+
+# Agendamentos (Fase 4)
+
+| Rota | Papel exigido |
+|---|---|
+| `GET /agendamentos` | qualquer usuário autenticado |
+| `GET /agendamentos/<id>` | qualquer usuário autenticado |
+| `POST /agendamentos` | qualquer usuário autenticado |
+| `PATCH /agendamentos/<id>` | qualquer usuário autenticado |
+| `POST /agendamentos/<id>/cancelar` | qualquer usuário autenticado |
+| `POST /agendamentos/<id>/concluir` | `admin` ou `barbeiro` |
+
+Admin e barbeiro enxergam e gerenciam a agenda inteira. **Cliente só enxerga e
+mexe nos próprios agendamentos (RF21)**: o de outra pessoa responde 404, como se
+não existisse, e ao marcar o cliente é sempre ele mesmo (o `cliente_id` do corpo
+é ignorado).
+
+## Data, hora e fuso
+
+- **Entrada:** ISO 8601 **com fuso obrigatório**, sem segundos.
+  `"2026-10-20T14:30:00-03:00"` ou `"2026-10-20T17:30:00Z"`. Sem fuso
+  (`"2026-10-20T14:30:00"`) dá 422: não dá para saber se é Brasília ou UTC.
+  No JavaScript, `new Date(...).toISOString()` já manda em UTC com `Z`.
+- **Saída:** sempre no fuso da barbearia (`America/Sao_Paulo`), com o offset:
+  `"2026-10-20T14:30:00-03:00"`.
+- **Banco:** `timestamptz`. Nenhum horário sem fuso circula no backend.
+- O filtro `dia` é o dia de Brasília (00:00 até 24:00 de Brasília).
+
+## Status
+
+| Status | Pode ir para |
+|---|---|
+| `agendado` | `concluido`, `cancelado` |
+| `concluido` | — (final) |
+| `cancelado` | — (final) |
+
+Só agendamento `agendado` pode ser remarcado. Cancelar **não apaga** o registro:
+o dashboard precisa dele para a taxa de cancelamento (RF19).
+
+## Regra de conflito (RN01)
+
+Nenhum agendamento do mesmo barbeiro pode se sobrepor a outro. O intervalo é
+`[inicio, fim)`: um agendamento que começa exatamente quando outro termina é
+válido. Agendamento `cancelado` não bloqueia horário; `concluido` bloqueia.
+
+A regra é checada no service (que monta a mensagem de erro) e garantida também
+no banco por uma `EXCLUDE` constraint, para o caso de duas pessoas marcarem o
+mesmo horário ao mesmo tempo.
+
+Conflito responde `409 CONFLITO` com mensagem pronta para exibir:
+
+```json
+{
+  "erro": {
+    "codigo": "CONFLITO",
+    "mensagem": "João já tem agendamento em 20/10/2026 das 13:30 às 14:30. Escolha outro horário."
+  }
+}
+```
+
+Objeto de agendamento:
+
+```json
+{
+  "id": 7,
+  "cliente": { "id": 4, "nome": "Ana" },
+  "barbeiro": { "id": 2, "nome": "João" },
+  "inicio": "2026-10-20T13:30:00-03:00",
+  "fim": "2026-10-20T14:30:00-03:00",
+  "status": "agendado",
+  "observacao": null,
+  "servicos": [
+    { "servico_id": 1, "nome": "Corte", "preco_cobrado": "35.00" },
+    { "servico_id": 2, "nome": "Barba", "preco_cobrado": "25.50" }
+  ],
+  "total": "60.50",
+  "criado_em": "2026-10-18T10:02:11.481203-03:00"
+}
+```
+
+- `fim` = `inicio` + soma das durações dos serviços, **gravado** na marcação
+  (RF14). Mudar a duração de um serviço depois não desloca a agenda (RN03).
+- `preco_cobrado` é cópia do preço do serviço na marcação (RN02). `total` é a
+  soma deles. Ambos saem como string, igual ao preço do serviço.
+
+## GET /agendamentos
+
+Lista paginada, em ordem de horário (RF17).
+
+| Parâmetro | Regra |
+|---|---|
+| `dia` | opcional, `AAAA-MM-DD`. Agendamentos que começam nesse dia (Brasília) |
+| `barbeiro_id` | opcional |
+| `cliente_id` | opcional. Para cliente logado é sempre ele mesmo |
+| `status` | opcional, `agendado`, `concluido` ou `cancelado` |
+| `pagina`, `por_pagina` | ver Paginação |
+
+Exemplo: `GET /api/v1/agendamentos?dia=2026-10-20&barbeiro_id=2`
+
+Resposta `200`: envelope de paginação com objetos de agendamento em `itens`.
+
+| Status | `codigo` | Quando |
+|---|---|---|
+| 422 | `DADOS_INVALIDOS` | `dia` fora do formato, `status` desconhecido, paginação fora da faixa |
+
+## GET /agendamentos/&lt;id&gt;
+
+Resposta `200`: objeto de agendamento.
+
+| Status | `codigo` | Quando |
+|---|---|---|
+| 404 | `NAO_ENCONTRADO` | Id não existe, ou é de outro cliente |
+
+## POST /agendamentos
+
+| Campo | Tipo | Obrigatório | Regra |
+|---|---|---|---|
+| `cliente_id` | inteiro | admin e barbeiro | Usuário com papel `cliente`, ativo. Ignorado quando quem marca é cliente |
+| `barbeiro_id` | inteiro | sim | Usuário com papel `barbeiro`, ativo |
+| `inicio` | string | sim | Ver "Data, hora e fuso". Não pode estar no passado |
+| `servico_ids` | lista de inteiros | sim | 1 a 10 serviços ativos. Repetidos contam uma vez |
+| `observacao` | string | não | até 500 caracteres |
+
+```json
+{
+  "cliente_id": 4,
+  "barbeiro_id": 2,
+  "inicio": "2026-10-20T13:30:00-03:00",
+  "servico_ids": [1, 2]
+}
+```
+
+Resposta `201`: objeto de agendamento, com status `agendado`.
+
+| Status | `codigo` | Quando |
+|---|---|---|
+| 404 | `NAO_ENCONTRADO` | Cliente, barbeiro ou serviço não existe (ou tem outro papel) |
+| 409 | `CONFLITO` | Horário sobrepõe outro agendamento do barbeiro |
+| 422 | `REGRA_VIOLADA` | Horário no passado, serviço, cliente ou barbeiro desativado |
+| 422 | `DADOS_INVALIDOS` | Campo faltando, horário sem fuso ou com segundos, campo desconhecido |
+
+## PATCH /agendamentos/&lt;id&gt;
+
+Remarca: novo início e, opcionalmente, outro barbeiro. **A duração é mantida**
+(a do próprio agendamento, não a atual dos serviços) e a regra de conflito é
+aplicada de novo, ignorando o próprio agendamento (RF18). Serviços não mudam por
+aqui: para trocar serviços, cancele e marque de novo.
+
+| Campo | Tipo | Obrigatório | Regra |
+|---|---|---|---|
+| `inicio` | string | sim | Ver "Data, hora e fuso". Não pode estar no passado |
+| `barbeiro_id` | inteiro | não | Barbeiro ativo |
+
+```json
+{ "inicio": "2026-10-20T15:00:00-03:00" }
+```
+
+Resposta `200`: objeto de agendamento atualizado.
+
+| Status | `codigo` | Quando |
+|---|---|---|
+| 404 | `NAO_ENCONTRADO` | Agendamento ou barbeiro não existe, ou agendamento de outro cliente |
+| 409 | `CONFLITO` | Novo horário sobrepõe outro agendamento |
+| 422 | `REGRA_VIOLADA` | Agendamento não está `agendado`, horário no passado, barbeiro desativado |
+| 422 | `DADOS_INVALIDOS` | Campo inválido ou desconhecido |
+
+## POST /agendamentos/&lt;id&gt;/cancelar
+
+Sem corpo. Muda o status para `cancelado` e libera o horário. Resposta `200`:
+objeto de agendamento.
+
+| Status | `codigo` | Quando |
+|---|---|---|
+| 404 | `NAO_ENCONTRADO` | Id não existe, ou é de outro cliente |
+| 422 | `REGRA_VIOLADA` | Agendamento já concluído ou cancelado |
+
+## POST /agendamentos/&lt;id&gt;/concluir
+
+Sem corpo. Só admin e barbeiro (RF20). Resposta `200`: objeto de agendamento.
+
+| Status | `codigo` | Quando |
+|---|---|---|
+| 403 | `ACESSO_NEGADO` | Quem pede é cliente |
+| 404 | `NAO_ENCONTRADO` | Id não existe |
+| 422 | `REGRA_VIOLADA` | Agendamento já concluído ou cancelado |
 
 ---
 
