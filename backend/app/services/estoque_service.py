@@ -50,6 +50,13 @@ class EstoqueService:
         self.produto_repositorio = produto_repositorio
         self.movimentacao_repositorio = movimentacao_repositorio
 
+    def listar_movimentacoes(self, produto_id, tipo=None, pagina=1, por_pagina=20):
+        if self.produto_repositorio.get_by_id(produto_id) is None:
+            raise NaoEncontrado(f"Produto {produto_id} não existe.")
+        return self.movimentacao_repositorio.listar_do_produto(
+            produto_id, tipo=tipo, pagina=pagina, por_pagina=por_pagina
+        )
+
     def registrar_entrada(self, produto_id, quantidade, usuario_id, motivo=None):
         return self.movimentar(
             produto_id,

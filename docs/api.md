@@ -624,6 +624,184 @@ Sem corpo. Só admin e barbeiro (RF20). Resposta `200`: objeto de agendamento.
 
 ---
 
+# Estoque (Fase 5)
+
+| Rota | Papel exigido |
+|---|---|
+| `GET /produtos` | `admin` |
+| `GET /produtos/em-falta` | `admin` |
+| `GET /produtos/<id>` | `admin` |
+| `POST /produtos` | `admin` |
+| `PUT /produtos/<id>` | `admin` |
+| `DELETE /produtos/<id>` | `admin` |
+| `POST /produtos/<id>/entradas` | `admin` |
+| `POST /produtos/<id>/saidas` | `admin` |
+| `GET /produtos/<id>/movimentacoes` | `admin` |
+
+Estoque é área do admin (RF22). Barbeiro e cliente recebem `403` em todas as rotas.
+
+Objeto de produto:
+
+```json
+{
+  "id": 1,
+  "nome": "Pomada",
+  "unidade": "g",
+  "quantidade_atual": "10.50",
+  "estoque_minimo": "5.00",
+  "em_falta": false,
+  "ativo": true
+}
+```
+
+- `quantidade_atual` e `estoque_minimo` saem como **string** com duas casas, pelo
+  mesmo motivo do `preco` do serviço (RNF09). Aceitam fração porque `ml` e `g`
+  podem ser fracionados.
+- `em_falta` é `true` quando `quantidade_atual <= estoque_minimo` (RF27). Estar
+  exatamente no mínimo já conta como em falta.
+
+**A quantidade nunca é alterada direto (RN04).** Não existe campo
+`quantidade_atual` no cadastro nem na edição: mandar esse campo dá `422`. O
+produto nasce com quantidade `0` e o estoque inicial entra por
+`POST /produtos/<id>/entradas`. Toda mudança de quantidade grava uma
+movimentação, na mesma transação.
+
+## GET /produtos
+
+Lista sem paginação, ordenada por nome.
+
+| Parâmetro | Regra |
+|---|---|
+| `ativo` | opcional, `true` ou `false` |
+
+Resposta `200`: lista de objetos de produto.
+
+## GET /produtos/em-falta
+
+Produtos **ativos** com `quantidade_atual <= estoque_minimo`, ordenados por nome
+(RF27). É a mesma consulta do card "produtos em falta" do dashboard (RF32).
+
+Resposta `200`: lista de objetos de produto.
+
+## GET /produtos/&lt;id&gt;
+
+Resposta `200`: objeto de produto.
+
+| Status | `codigo` | Quando |
+|---|---|---|
+| 404 | `NAO_ENCONTRADO` | Id não existe |
+
+## POST /produtos
+
+| Campo | Tipo | Obrigatório | Regra |
+|---|---|---|---|
+| `nome` | string | sim | 2 a 120 caracteres, após remover espaços das pontas |
+| `unidade` | string | sim | `un`, `ml` ou `g` |
+| `estoque_minimo` | string ou número | não | padrão `0`. De 0 a 99999999.99, no máximo 2 casas |
+
+```json
+{ "nome": "Pomada", "unidade": "g", "estoque_minimo": "5" }
+```
+
+Resposta `201`: objeto de produto, ativo e com `quantidade_atual` `"0.00"`.
+
+| Status | `codigo` | Quando |
+|---|---|---|
+| 422 | `DADOS_INVALIDOS` | Campo faltando, fora da faixa ou desconhecido (inclusive `quantidade_atual`) |
+
+## PUT /produtos/&lt;id&gt;
+
+Atualização parcial com os mesmos campos do POST, mais `ativo` (boolean) para
+reativar. `quantidade_atual` continua proibido.
+
+```json
+{ "estoque_minimo": "8" }
+```
+
+Resposta `200`: objeto de produto atualizado.
+
+| Status | `codigo` | Quando |
+|---|---|---|
+| 404 | `NAO_ENCONTRADO` | Id não existe |
+| 422 | `DADOS_INVALIDOS` | Campo inválido ou desconhecido |
+
+## DELETE /produtos/&lt;id&gt;
+
+Desativa o produto (exclusão lógica): o histórico de movimentações continua
+apontando para ele. Produto desativado não aceita entrada nem saída e não aparece
+em `/em-falta`.
+
+Resposta `204` sem corpo.
+
+| Status | `codigo` | Quando |
+|---|---|---|
+| 404 | `NAO_ENCONTRADO` | Id não existe |
+
+## POST /produtos/&lt;id&gt;/entradas e POST /produtos/&lt;id&gt;/saidas
+
+Registra uma movimentação e atualiza a quantidade do produto, numa transação só
+(RF24, RF25). O tipo vem da rota; o responsável vem do token.
+
+| Campo | Tipo | Obrigatório | Regra |
+|---|---|---|---|
+| `quantidade` | string ou número | sim | maior que 0, até 99999999.99, no máximo 2 casas. Sempre positiva: o sinal vem da rota |
+| `motivo` | string | não | até 160 caracteres. Texto vazio vira `null` |
+
+```json
+{ "quantidade": "2", "motivo": "uso no atendimento" }
+```
+
+Resposta `201`: objeto de movimentação, com o produto já atualizado em
+`produto`:
+
+```json
+{
+  "id": 12,
+  "tipo": "saida",
+  "quantidade": "2.00",
+  "motivo": "uso no atendimento",
+  "usuario": { "id": 1, "nome": "Admin" },
+  "criado_em": "2026-10-20T18:45:00-03:00",
+  "produto": { "id": 1, "nome": "Pomada", "unidade": "g", "quantidade_atual": "8.50", "estoque_minimo": "5.00", "em_falta": false, "ativo": true }
+}
+```
+
+| Status | `codigo` | Quando |
+|---|---|---|
+| 404 | `NAO_ENCONTRADO` | Produto não existe |
+| 422 | `REGRA_VIOLADA` | Saída maior que a quantidade disponível (RF26), ou produto desativado |
+| 422 | `DADOS_INVALIDOS` | Quantidade zero, negativa, com mais de 2 casas, ou campo desconhecido |
+
+Exemplo de saída recusada:
+
+```json
+{
+  "erro": {
+    "codigo": "REGRA_VIOLADA",
+    "mensagem": "Estoque insuficiente de Pomada: disponível 2.00 g, pedido 3 g."
+  }
+}
+```
+
+## GET /produtos/&lt;id&gt;/movimentacoes
+
+Histórico paginado do produto, da movimentação mais recente para a mais antiga.
+
+| Parâmetro | Regra |
+|---|---|
+| `tipo` | opcional, `entrada` ou `saida` |
+| `pagina`, `por_pagina` | ver Paginação |
+
+Resposta `200`: envelope de paginação com objetos de movimentação em `itens`,
+**sem** o campo `produto` (ali seria o saldo de hoje, não o da época).
+
+| Status | `codigo` | Quando |
+|---|---|---|
+| 404 | `NAO_ENCONTRADO` | Produto não existe |
+| 422 | `DADOS_INVALIDOS` | `tipo` desconhecido, paginação fora da faixa |
+
+---
+
 # Testes
 
 ```

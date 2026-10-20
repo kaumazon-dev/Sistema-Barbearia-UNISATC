@@ -1,6 +1,9 @@
 from sqlalchemy import func
+from sqlalchemy.ext.hybrid import hybrid_property
 
 from app.extensions import db
+
+UNIDADES = ("un", "ml", "g")
 
 TIPO_ENTRADA = "entrada"
 TIPO_SAIDA = "saida"
@@ -36,6 +39,15 @@ class Produto(db.Model):
         db.Numeric(10, 2), nullable=False, server_default=db.text("0")
     )
     ativo = db.Column(db.Boolean, nullable=False, server_default=db.text("true"))
+
+    @hybrid_property
+    def em_falta(self):
+        """Quantidade no minimo ou abaixo dele (RF27).
+
+        hybrid_property: a mesma regra vale no Python (produto.em_falta) e no
+        SQL (where(Produto.em_falta)), sem duas definicoes para divergir.
+        """
+        return self.quantidade_atual <= self.estoque_minimo
 
     def __repr__(self):
         return f"<Produto {self.id} {self.nome} {self.quantidade_atual}{self.unidade}>"

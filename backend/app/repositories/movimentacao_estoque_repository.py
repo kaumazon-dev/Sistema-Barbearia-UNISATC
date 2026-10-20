@@ -1,3 +1,5 @@
+from sqlalchemy.orm import selectinload
+
 from app.extensions import db
 from app.models.produto import MovimentacaoEstoque
 from app.repositories.base_repository import BaseRepository
@@ -18,3 +20,18 @@ class MovimentacaoEstoqueRepository(BaseRepository):
         db.session.add(movimentacao)
         db.session.commit()
         return movimentacao
+
+    def listar_do_produto(self, produto_id, tipo=None, pagina=1, por_pagina=20):
+        """Historico paginado do produto, da mais recente para a mais antiga.
+
+        Usa o indice (produto_id, criado_em).
+        """
+        consulta = (
+            db.select(self.model)
+            .options(selectinload(self.model.usuario))
+            .where(self.model.produto_id == produto_id)
+        )
+        if tipo is not None:
+            consulta = consulta.where(self.model.tipo == tipo)
+        consulta = consulta.order_by(self.model.criado_em.desc(), self.model.id.desc())
+        return self.paginar(consulta, pagina, por_pagina)

@@ -23,6 +23,9 @@ class RepositorioProdutoFalso:
         self.produtos = {p.id: p for p in produtos}
         self.travados = []
 
+    def get_by_id(self, produto_id):
+        return self.produtos.get(produto_id)
+
     def buscar_para_movimentar(self, produto_id):
         self.travados.append(produto_id)
         return self.produtos.get(produto_id)
@@ -42,6 +45,10 @@ class RepositorioMovimentacaoFalso:
         self.commitado[produto.id] = produto.quantidade_atual
         self.movimentacoes.append(movimentacao)
         return movimentacao
+
+    def listar_do_produto(self, produto_id, **filtros):
+        self.ultima_listagem = dict(filtros, produto_id=produto_id)
+        return [], 0
 
     def desfazer(self):
         self.desfeitos += 1
@@ -221,6 +228,25 @@ def test_falha_ao_gravar_desfaz_a_quantidade(pomada, inativo):
     assert movimentacoes.desfeitos == 1
     assert pomada.quantidade_atual == Decimal("10")
     assert movimentacoes.movimentacoes == []
+
+
+# --- historico --------------------------------------------------------------------
+
+
+def test_listar_movimentacoes_repassa_filtros(service, repositorios):
+    _, movimentacoes = repositorios
+    service.listar_movimentacoes(1, tipo=TIPO_SAIDA, pagina=2, por_pagina=5)
+    assert movimentacoes.ultima_listagem == {
+        "produto_id": 1,
+        "tipo": TIPO_SAIDA,
+        "pagina": 2,
+        "por_pagina": 5,
+    }
+
+
+def test_listar_movimentacoes_de_produto_inexistente(service):
+    with pytest.raises(NaoEncontrado):
+        service.listar_movimentacoes(99)
 
 
 # --- guarda: ninguem altera a quantidade por fora do service --------------------

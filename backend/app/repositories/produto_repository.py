@@ -7,6 +7,24 @@ class ProdutoRepository(BaseRepository):
     def __init__(self):
         super().__init__(Produto)
 
+    def listar(self, ativo=None):
+        consulta = db.select(self.model).order_by(self.model.nome, self.model.id)
+        if ativo is not None:
+            consulta = consulta.where(self.model.ativo == ativo)
+        return db.session.execute(consulta).scalars().all()
+
+    def listar_em_falta(self):
+        """Produtos ativos com quantidade_atual <= estoque_minimo (RF27, RF32).
+
+        O filtro roda no banco: em_falta e hybrid_property e vira SQL aqui.
+        """
+        consulta = (
+            db.select(self.model)
+            .where(self.model.ativo.is_(True), self.model.em_falta)
+            .order_by(self.model.nome, self.model.id)
+        )
+        return db.session.execute(consulta).scalars().all()
+
     def buscar_para_movimentar(self, produto_id):
         """Busca o produto travando a linha (SELECT ... FOR UPDATE).
 
