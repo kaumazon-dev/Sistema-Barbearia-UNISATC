@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 import pytest
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import DBAPIError, IntegrityError
 
 from app.extensions import db
 from app.models.produto import MovimentacaoEstoque, Produto
@@ -203,6 +203,54 @@ def test_falha_no_commit_desfaz_as_duas_escritas(app, admin):
         service.registrar_entrada(produto.id, Decimal("5"), usuario_id=999999)
 
     assert no_banco(produto.id) == (Decimal("0"), 0)
+
+
+# --- historico imutavel ------------------------------------------------------------
+
+# SQLSTATE do RAISE do trigger (restrict_violation).
+_HISTORICO_IMUTAVEL = "23001"
+
+
+def _primeira_movimentacao(client, admin):
+    produto = cadastrar(client, admin)
+    entrada(client, admin, produto["id"], "10", "compra")
+    db.session.expire_all()
+    return db.session.scalar(db.select(MovimentacaoEstoque))
+
+
+@pytest.mark.parametrize(
+    "sql",
+    [
+        "UPDATE movimentacao_estoque SET quantidade = 999",
+        "UPDATE movimentacao_estoque SET motivo = 'editado'",
+        "DELETE FROM movimentacao_estoque",
+    ],
+)
+def test_banco_recusa_editar_ou_apagar_movimentacao(client, admin, sql):
+    """Mesmo por fora da API (SQL solto, pgAdmin), o historico nao muda."""
+    movimentacao = _primeira_movimentacao(client, admin)
+
+    with pytest.raises(DBAPIError) as erro:
+        db.session.execute(db.text(sql))
+        db.session.commit()
+    db.session.rollback()
+
+    assert erro.value.orig.pgcode == _HISTORICO_IMUTAVEL
+    db.session.expire_all()
+    intacta = db.session.get(MovimentacaoEstoque, movimentacao.id)
+    assert (intacta.quantidade, intacta.motivo) == (Decimal("10"), "compra")
+
+
+def test_orm_tambem_nao_edita_movimentacao(client, admin):
+    movimentacao = _primeira_movimentacao(client, admin)
+
+    movimentacao.motivo = "editado"
+    with pytest.raises(DBAPIError):
+        db.session.commit()
+    db.session.rollback()
+
+    db.session.expire_all()
+    assert db.session.get(MovimentacaoEstoque, movimentacao.id).motivo == "compra"
 
 
 # --- produtos em falta (RF27) ----------------------------------------------------

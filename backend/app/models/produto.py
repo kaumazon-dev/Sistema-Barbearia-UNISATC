@@ -1,4 +1,4 @@
-from sqlalchemy import func
+from sqlalchemy import DDL, event, func
 from sqlalchemy.ext.hybrid import hybrid_property
 
 from app.extensions import db
@@ -54,7 +54,12 @@ class Produto(db.Model):
 
 
 class MovimentacaoEstoque(db.Model):
-    """Historico de toda mudanca de quantidade. O dashboard le daqui."""
+    """Historico de toda mudanca de quantidade. O dashboard le daqui.
+
+    Registro gravado nunca e editado nem apagado: um trigger no banco recusa
+    UPDATE e DELETE. Lancamento errado se corrige com uma movimentacao nova no
+    sentido contrario, e o historico mostra as duas.
+    """
 
     __tablename__ = "movimentacao_estoque"
     __table_args__ = (
@@ -83,3 +88,35 @@ class MovimentacaoEstoque(db.Model):
 
     def __repr__(self):
         return f"<MovimentacaoEstoque {self.id} {self.tipo} {self.quantidade}>"
+
+
+# A migration cria o trigger; isto cobre o create_all dos testes. So no
+# Postgres: plpgsql nao existe em outro banco. "%%" e o "%" literal do
+# RAISE: o DDL do SQLAlchemy usa "%" para substituicao.
+_FUNCAO_HISTORICO_IMUTAVEL = DDL(
+    """
+    CREATE OR REPLACE FUNCTION bloquear_alteracao_movimentacao() RETURNS trigger AS $$
+    BEGIN
+        RAISE EXCEPTION 'movimentacao_estoque e historico: %% nao e permitido.', TG_OP
+            USING ERRCODE = 'restrict_violation';
+    END;
+    $$ LANGUAGE plpgsql
+    """
+)
+_TRIGGER_HISTORICO_IMUTAVEL = DDL(
+    """
+    CREATE TRIGGER trg_movimentacao_estoque_imutavel
+        BEFORE UPDATE OR DELETE ON movimentacao_estoque
+        FOR EACH ROW EXECUTE FUNCTION bloquear_alteracao_movimentacao()
+    """
+)
+event.listen(
+    MovimentacaoEstoque.__table__,
+    "after_create",
+    _FUNCAO_HISTORICO_IMUTAVEL.execute_if(dialect="postgresql"),
+)
+event.listen(
+    MovimentacaoEstoque.__table__,
+    "after_create",
+    _TRIGGER_HISTORICO_IMUTAVEL.execute_if(dialect="postgresql"),
+)

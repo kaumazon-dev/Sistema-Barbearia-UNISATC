@@ -12,7 +12,10 @@ from pathlib import Path
 import pytest
 
 from app.core.exceptions import NaoEncontrado, RegraDeNegocioViolada
-from app.models.produto import TIPO_ENTRADA, TIPO_SAIDA, Produto
+from app.models.produto import TIPO_ENTRADA, TIPO_SAIDA, MovimentacaoEstoque, Produto
+from app.repositories.movimentacao_estoque_repository import (
+    MovimentacaoEstoqueRepository,
+)
 from app.services.estoque_service import EstoqueService, calcular_nova_quantidade
 
 USUARIO_ID = 7
@@ -247,6 +250,16 @@ def test_listar_movimentacoes_repassa_filtros(service, repositorios):
 def test_listar_movimentacoes_de_produto_inexistente(service):
     with pytest.raises(NaoEncontrado):
         service.listar_movimentacoes(99)
+
+
+# --- historico imutavel ---------------------------------------------------------
+
+
+@pytest.mark.parametrize("operacao", ["update", "delete"])
+def test_repositorio_nao_edita_nem_apaga_movimentacao(operacao):
+    """Movimentacao e historico: correcao se faz com movimentacao contraria."""
+    with pytest.raises(TypeError, match="historico"):
+        getattr(MovimentacaoEstoqueRepository(), operacao)(MovimentacaoEstoque())
 
 
 # --- guarda: ninguem altera a quantidade por fora do service --------------------
