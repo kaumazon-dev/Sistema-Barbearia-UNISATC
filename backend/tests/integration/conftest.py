@@ -37,8 +37,10 @@ def app():
 def banco_limpo(app):
     yield
     db.session.rollback()
-    for tabela in reversed(db.metadata.sorted_tables):
-        db.session.execute(tabela.delete())
+    # TRUNCATE e nao DELETE: movimentacao_estoque tem trigger que recusa
+    # DELETE (historico imutavel). TRUNCATE nao dispara trigger de linha.
+    tabelas = ", ".join(f'"{t.name}"' for t in db.metadata.sorted_tables)
+    db.session.execute(db.text(f"TRUNCATE TABLE {tabelas}"))
     db.session.commit()
 
 

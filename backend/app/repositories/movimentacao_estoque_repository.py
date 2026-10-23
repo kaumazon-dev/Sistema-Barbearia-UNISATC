@@ -21,6 +21,14 @@ class MovimentacaoEstoqueRepository(BaseRepository):
         db.session.commit()
         return movimentacao
 
+    # Historico e so de insercao. O banco tambem recusa (trigger), mas aqui o
+    # erro aparece no codigo, antes de virar 500 vindo do Postgres.
+    def update(self, entidade):
+        raise TypeError("movimentacao_estoque e historico: não pode ser editada.")
+
+    def delete(self, entidade):
+        raise TypeError("movimentacao_estoque e historico: não pode ser apagada.")
+
     def listar_do_produto(self, produto_id, tipo=None, pagina=1, por_pagina=20):
         """Historico paginado do produto, da mais recente para a mais antiga.
 
