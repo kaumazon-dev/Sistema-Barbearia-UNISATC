@@ -143,3 +143,11 @@ agendamentos já marcados.
 **RN04 — Estoque sempre com histórico.**
 A quantidade de um produto nunca é alterada diretamente. Toda mudança passa por um
 registro em `movimentacao_estoque`.
+
+**RN05 — Métricas do dashboard.**
+Atendimentos, faturamento e ranking de serviços contam apenas agendamentos
+concluídos. O faturamento soma o preço cobrado na marcação (RN02), nunca o preço
+atual do serviço. A taxa de cancelamento é cancelados ÷ (concluídos + cancelados):
+agendamentos ainda não realizados ficam fora, porque ainda não tiveram desfecho.
+O período é contado em dias no fuso da barbearia; sem período informado, vale o mês
+atual, do dia 1 até hoje. A semana começa na segunda-feira.

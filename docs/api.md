@@ -802,6 +802,152 @@ Resposta `200`: envelope de paginação com objetos de movimentação em `itens`
 
 ---
 
+# Dashboard (Fase 6)
+
+| Rota | Papel exigido |
+|---|---|
+| `GET /dashboard/atendimentos` | `admin` |
+| `GET /dashboard/faturamento` | `admin` |
+| `GET /dashboard/servicos-ranking` | `admin` |
+| `GET /dashboard/cancelamento` | `admin` |
+
+Dashboard é área do admin. Barbeiro e cliente recebem `403` em todas as rotas.
+
+Produtos em falta (RF32) não têm rota própria aqui: o card do dashboard usa
+`GET /produtos/em-falta`, da Fase 5.
+
+As respostas já vêm no formato do Chart.js: `labels` e `valores` alinhados por
+posição, prontos para `data.labels` e `data.datasets[0].data`.
+
+As regras de cada métrica estão na RN05 de `docs/requisitos.md`.
+
+## Período
+
+Parâmetros de consulta aceitos por todas as rotas:
+
+| Parâmetro | Regra |
+|---|---|
+| `de` | opcional, data `AAAA-MM-DD` |
+| `ate` | opcional, data `AAAA-MM-DD`, **inclusivo** |
+
+- As datas são dias no fuso da barbearia (`America/Sao_Paulo`).
+  `de=2026-10-01&ate=2026-10-31` é o mês de outubro inteiro.
+- Informe os dois ou nenhum. Sem nenhum, vale o mês atual, do dia 1 até hoje.
+- `ate` não pode ser anterior a `de`, e o intervalo máximo é de 366 dias.
+- Toda resposta devolve `de` e `ate` com o período efetivamente usado. Assim o front
+  descobre quais datas o padrão aplicou.
+
+Erros comuns às quatro rotas:
+
+| Status | `codigo` | Quando |
+|---|---|---|
+| 401 | `NAO_AUTENTICADO` | Sem token |
+| 403 | `ACESSO_NEGADO` | Papel diferente de `admin` |
+| 422 | `DADOS_INVALIDOS` | Data inválida, só uma das datas, `ate` antes de `de`, intervalo acima de 366 dias, parâmetro fora da faixa |
+
+## GET /dashboard/atendimentos
+
+Quantidade de atendimentos **concluídos** por semana ou por mês (RF28). Um
+agendamento com mais de um serviço conta como um atendimento.
+
+| Parâmetro | Regra |
+|---|---|
+| `granularidade` | opcional, `semana` (padrão) ou `mes` |
+
+Resposta `200`:
+
+```json
+{
+  "granularidade": "semana",
+  "de": "2026-10-01",
+  "ate": "2026-10-31",
+  "labels": ["2026-09-28", "2026-10-05", "2026-10-12", "2026-10-19", "2026-10-26"],
+  "valores": [19, 34, 34, 37, 0]
+}
+```
+
+- **Semana:** o rótulo é a data da segunda-feira que abre a semana. A primeira
+  e a última semana podem começar antes de `de` ou terminar depois de `ate`, mas só
+  contam os dias dentro do período.
+- **Mês:** o rótulo é `AAAA-MM`.
+- Períodos sem nenhum atendimento aparecem com `0`, para o gráfico não pular datas.
+
+## GET /dashboard/faturamento
+
+Soma do preço cobrado dos atendimentos **concluídos**, por semana ou por mês
+(RF29). Usa `preco_cobrado`, então um reajuste no serviço não altera meses já
+fechados.
+
+Parâmetros e rótulos iguais aos de `/dashboard/atendimentos`.
+
+Resposta `200`:
+
+```json
+{
+  "granularidade": "mes",
+  "de": "2026-08-01",
+  "ate": "2026-10-31",
+  "labels": ["2026-08", "2026-09", "2026-10"],
+  "valores": ["7560.00", "8150.00", "6880.00"]
+}
+```
+
+`valores` sai como **string** com duas casas, como todo valor monetário da API
+(RNF09). O Chart.js aceita string numérica; para somar no JavaScript, converta com
+`Number()` só na hora de exibir.
+
+## GET /dashboard/servicos-ranking
+
+Serviços mais vendidos em atendimentos **concluídos** (RF30), do mais vendido para
+o menos. Em caso de empate, a ordem é pelo nome.
+
+| Parâmetro | Regra |
+|---|---|
+| `limite` | opcional, de 1 a 20, padrão 5 |
+
+Resposta `200`:
+
+```json
+{
+  "de": "2026-10-01",
+  "ate": "2026-10-31",
+  "labels": ["Corte", "Barba", "Pigmentação"],
+  "valores": [80, 45, 30],
+  "receitas": ["3200.00", "1125.00", "1800.00"]
+}
+```
+
+`valores` é a quantidade de vezes que o serviço foi realizado. `receitas` é a soma
+do preço cobrado daquele serviço, alinhada pela mesma posição.
+
+## GET /dashboard/cancelamento
+
+Taxa de cancelamento no período (RF31): cancelados ÷ (concluídos + cancelados).
+Agendamentos com status `agendado` ficam fora.
+
+Resposta `200`:
+
+```json
+{
+  "de": "2026-08-01",
+  "ate": "2026-10-31",
+  "concluidos": 417,
+  "cancelados": 64,
+  "total": 481,
+  "taxa": "13.31",
+  "labels": ["Concluídos", "Cancelados"],
+  "valores": [417, 64]
+}
+```
+
+- `taxa` é um percentual com duas casas, arredondado meio para cima
+  (3,125% vira `"3.13"`).
+- `taxa` é `null` quando não há nenhum concluído nem cancelado no período: sem
+  desfecho, a taxa não existe, e `0` daria a impressão errada.
+- `labels` e `valores` servem direto para um gráfico de rosca.
+
+---
+
 # Testes
 
 ```

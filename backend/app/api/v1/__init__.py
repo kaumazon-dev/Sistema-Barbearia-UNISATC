@@ -7,6 +7,7 @@ blueprint_inicial = Blueprint("api_v1", __name__, url_prefix="/api/v1")
 from app.api.v1.agendamentos import blueprint_agendamentos  # noqa: E402
 from app.api.v1.auth import blueprint_auth  # noqa: E402
 from app.api.v1.clientes import blueprint_clientes  # noqa: E402
+from app.api.v1.dashboard import blueprint_dashboard  # noqa: E402
 from app.api.v1.estoque import blueprint_estoque  # noqa: E402
 from app.api.v1.servicos import blueprint_servicos  # noqa: E402
 
@@ -15,3 +16,4 @@ blueprint_inicial.register_blueprint(blueprint_clientes)
 blueprint_inicial.register_blueprint(blueprint_servicos)
 blueprint_inicial.register_blueprint(blueprint_agendamentos)
 blueprint_inicial.register_blueprint(blueprint_estoque)
+blueprint_inicial.register_blueprint(blueprint_dashboard)
