@@ -4,5 +4,6 @@
   "python.testing.pytestArgs": ["backend/tests"],
   "python.testing.pytestEnabled": true,
   "files.insertFinalNewline": true,
-  "files.trimTrailingWhitespace": true
+  "files.trimTrailingWhitespace": true,
+  "python.terminal.useEnvFile": true
 }
