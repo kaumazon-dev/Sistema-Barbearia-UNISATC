@@ -8,6 +8,7 @@ from app.schemas.usuario_schema import (
     LoginSchema,
     UsuarioCadastroSchema,
     UsuarioFiltroSchema,
+    UsuarioResumoSchema,
     UsuarioSchema,
 )
 from app.services.auth_service import AuthService
@@ -19,6 +20,7 @@ schema_login = LoginSchema()
 schema_usuario = UsuarioSchema()
 schema_lista_usuarios = UsuarioSchema(many=True)
 schema_filtro = UsuarioFiltroSchema()
+schema_lista_resumo = UsuarioResumoSchema(many=True)
 
 
 def obter_servico():
@@ -57,3 +59,10 @@ def listar_usuarios():
     filtros = schema_filtro.load(request.args.to_dict())
     usuarios = obter_servico().listar_usuarios(filtros["papel"])
     return jsonify(schema_lista_usuarios.dump(usuarios))
+
+
+@blueprint_auth.route("/barbeiros", methods=["GET"])
+@rota_protegida()
+def listar_barbeiros():
+    barbeiros = obter_servico().listar_barbeiros()
+    return jsonify(schema_lista_resumo.dump(barbeiros))

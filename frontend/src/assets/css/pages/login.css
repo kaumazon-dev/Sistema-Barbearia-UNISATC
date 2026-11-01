@@ -1,0 +1,76 @@
+.login {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+  background:
+    radial-gradient(circle at 20% 0%, var(--gold-tint), transparent 45%),
+    var(--bg-app);
+}
+
+.login__caixa {
+  width: 100%;
+  max-width: 400px;
+  padding: 28px;
+}
+
+.login__marca {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.login__marca strong {
+  display: block;
+  font-size: 16px;
+}
+
+.login__marca small {
+  color: var(--gold);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  font-weight: 700;
+}
+
+.login__logo {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-md);
+  display: grid;
+  place-items: center;
+  background: var(--gold);
+  color: #1a1206;
+}
+
+.login__titulo {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.login__sub {
+  color: var(--text-2);
+  margin: 4px 0 20px;
+}
+
+.login__erro {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  background: var(--red-tint);
+  color: var(--red);
+  font-size: 13px;
+}
+
+.login__botao {
+  width: 100%;
+  justify-content: center;
+  margin-top: 6px;
+}
+
+.login__troca {
+  margin-top: 18px;
+  text-align: center;
+  color: var(--text-2);
+  font-size: 13px;
+}
