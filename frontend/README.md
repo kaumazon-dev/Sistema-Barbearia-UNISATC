@@ -37,8 +37,8 @@ Defina `VITE_API_URL` com a URL completa da API, por exemplo
 
 ## Regras do front
 
-- **Nenhuma tela chama `fetch`.** Tudo passa por `src/api/*.api.js`, que passa
-  por `src/api/http.js`.
+- **Nenhuma tela chama `fetch`.** Tudo passa por `src/js/api/*.api.js`, que passa
+  por `src/js/api/http.js`.
 - **`http.js` é o único lugar que conhece a URL base e o token.** Ele também
   converte toda resposta de erro em `ErroApi { status, codigo, mensagem, campos }`.
   A tela decide o que fazer pelo `codigo`, nunca pelo texto.
@@ -46,7 +46,7 @@ Defina `VITE_API_URL` com a URL completa da API, por exemplo
   a sessão e volta para o login.
 - **Dinheiro chega como string** (`"35.90"`). `Number()` só para exibir; somar
   usa `somarDinheiro` (centavos inteiros).
-- **Datas no fuso de Brasília**, como a API (`src/utils/datas.js`). O
+- **Datas no fuso de Brasília**, como a API (`src/js/utils/datas.js`). O
   formulário monta `2026-11-03T09:00:00-03:00`, com o fuso que a API exige.
 - O papel guardado no navegador só decide o que a tela **mostra**. Quem garante
   a permissão é o backend.
@@ -68,22 +68,57 @@ Defina `VITE_API_URL` com a URL completa da API, por exemplo
 A tela inicial é a primeira da coluna do papel. Abrir pela URL uma tela que o
 papel não acessa (`#/estoque` como cliente) cai na tela inicial.
 
+## Testes
+
+```bash
+cd frontend
+npm test
+```
+
+Testes com Vitest em `tests/`, sem navegador e sem API (o `fetch` é simulado).
+Cobrem as regras que quebram em silêncio: soma de dinheiro sem erro de centavo,
+datas no fuso de Brasília em qualquer computador, erros da API por campo,
+`http.js` (token, URL, sessão expirada) e as telas liberadas por papel.
+
 ## Estrutura
 
+Segue o `CLAUDE.md`: uma pasta por tela, CSS de componente separado do CSS de
+página, e o código que não é tela em `js/`.
+
 ```
-src/
-├── api/
-│   ├── http.js              # fetch centralizado, URL base, token, ErroApi
-│   └── *.api.js             # um módulo por recurso da API
-├── store/sessao.js          # token + usuário no localStorage, telas por papel
-├── state/AppStore.jsx       # sessão, rota (#/tela), modal, avisos e ações
-├── pages/                   # uma tela por item do menu + Login
-├── forms/                   # modais de cadastro, remarcação, movimentação...
-├── components/              # Sidebar, Topbar, tabela, Modal, Grafico (Chart.js)...
-├── utils/
-│   ├── useCarregar.js       # busca da tela + recarga depois de salvar
-│   ├── datas.js             # fuso de Brasília
-│   ├── formato.js           # moeda, quantidade, status
-│   └── erros.js             # ErroApi -> erros por campo do formulário
-└── styles/                  # tokens de cor e tabela
+frontend/
+├── Dockerfile               # build com Node, imagem final nginx sem root
+├── nginx.conf               # estaticos + proxy de /api para o backend
+├── index.html
+├── tests/                   # Vitest
+└── src/
+    ├── main.jsx             # ponto de entrada
+    ├── App.jsx              # layout e troca de telas
+    ├── pages/               # uma pasta por tela, com os modais dela
+    │   ├── login/
+    │   ├── dashboard/
+    │   ├── agenda/          # Agendamentos + novo agendamento + remarcar
+    │   ├── clientes/        # lista + cadastro + ficha com histórico
+    │   ├── servicos/
+    │   ├── estoque/         # produtos + entrada/saída + histórico
+    │   ├── barbeiros/
+    │   ├── relatorios/      # gráficos Chart.js
+    │   └── configuracoes/
+    ├── assets/css/
+    │   ├── base.css         # tokens de cor, tipografia, badges
+    │   ├── components/      # CSS de cada componente
+    │   └── pages/           # CSS das telas
+    └── js/
+        ├── api/
+        │   ├── http.js      # fetch centralizado, URL base, token, ErroApi
+        │   └── *.api.js     # um módulo por recurso da API
+        ├── components/      # Sidebar, Topbar, Modal, tabela, Grafico...
+        ├── store/
+        │   ├── sessao.js    # token + usuário, telas por papel
+        │   └── AppStore.jsx # sessão, rota (#/tela), modal, avisos e ações
+        └── utils/
+            ├── useCarregar.js  # busca da tela + recarga depois de salvar
+            ├── datas.js        # fuso de Brasília
+            ├── formato.js      # moeda, quantidade, status
+            └── erros.js        # ErroApi -> erros por campo do formulário
 ```

@@ -13,5 +13,9 @@ export default defineConfig({
     proxy: {
       '/api': { target: API, changeOrigin: true }
     }
+  },
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['tests/setup.js']
   }
 });

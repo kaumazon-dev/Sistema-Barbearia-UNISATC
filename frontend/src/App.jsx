@@ -1,18 +1,18 @@
-import Sidebar from './components/Sidebar';
-import Topbar from './components/Topbar';
-import ModalHost from './components/ModalHost';
-import Toaster from './components/Toaster';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import Agendamentos from './pages/Agendamentos';
-import Clientes from './pages/Clientes';
-import Barbeiros from './pages/Barbeiros';
-import Servicos from './pages/Servicos';
-import Estoque from './pages/Estoque';
-import Relatorios from './pages/Relatorios';
-import Configuracoes from './pages/Configuracoes';
-import { AppProvider, useApp } from './state/AppStore';
-import './App.css';
+import Sidebar from './js/components/Sidebar';
+import Topbar from './js/components/Topbar';
+import ModalHost from './js/components/ModalHost';
+import Toaster from './js/components/Toaster';
+import Login from './pages/login/Login';
+import Dashboard from './pages/dashboard/Dashboard';
+import Agendamentos from './pages/agenda/Agendamentos';
+import Clientes from './pages/clientes/Clientes';
+import Barbeiros from './pages/barbeiros/Barbeiros';
+import Servicos from './pages/servicos/Servicos';
+import Estoque from './pages/estoque/Estoque';
+import Relatorios from './pages/relatorios/Relatorios';
+import Configuracoes from './pages/configuracoes/Configuracoes';
+import { AppProvider, useApp } from './js/store/AppStore';
+import './assets/css/components/layout.css';
 
 const paginas = {
   dashboard: Dashboard,
