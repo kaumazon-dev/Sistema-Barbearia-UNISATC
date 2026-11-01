@@ -1,0 +1,156 @@
+.sidebar {
+  width: var(--sidebar-w);
+  flex-shrink: 0;
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border-soft);
+  display: flex;
+  flex-direction: column;
+  padding: 18px 14px 16px;
+  gap: 18px;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+}
+
+/* Marca ------------------------------------------------------------------ */
+
+.sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 6px 0;
+}
+
+.sidebar__logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  color: var(--gold);
+  background: rgba(233, 162, 59, 0.08);
+  border: 1px solid rgba(233, 162, 59, 0.45);
+}
+
+.sidebar__brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.sidebar__brand-text strong {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+.sidebar__brand-text small {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 1.4px;
+  color: var(--gold);
+  margin-top: 3px;
+}
+
+/* Navegacao -------------------------------------------------------------- */
+
+.sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.sidebar__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-2);
+  text-align: left;
+  border-left: 3px solid transparent;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.sidebar__item:hover {
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--text);
+}
+
+.sidebar__item.is-active {
+  background: var(--gold-tint);
+  border-left-color: var(--gold);
+  color: var(--gold);
+  font-weight: 600;
+}
+
+/* Rodape ----------------------------------------------------------------- */
+
+.sidebar__footer {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sidebar__user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 6px 2px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.sidebar__user-info {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebar__user-info strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.sidebar__user-info small {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.sidebar__logout {
+  color: var(--text-3);
+  padding: 6px;
+  border-radius: var(--r-sm);
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.sidebar__logout:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+@media (max-width: 900px) {
+  .sidebar {
+    position: static;
+    height: auto;
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border-soft);
+  }
+
+  .sidebar__nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .sidebar__item {
+    width: auto;
+  }
+
+}
