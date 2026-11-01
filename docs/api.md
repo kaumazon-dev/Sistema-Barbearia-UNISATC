@@ -205,6 +205,28 @@ Resposta `200`: lista de objetos de usuário.
 Sem paginação: é uma rota administrativa de poucos registros. A listagem que
 cresce, a de clientes, é paginada (ver `GET /clientes`).
 
+## GET /auth/barbeiros
+
+Barbeiros **ativos**, ordenados por nome. Exige token, **qualquer papel**.
+
+Existe porque `GET /auth/usuarios` é só de admin, e barbeiro e cliente também
+marcam horário (`POST /agendamentos` exige `barbeiro_id`). Barbeiro desativado
+não aceita agendamento novo, então não aparece.
+
+Resposta `200`: lista com **só `id` e `nome`**. E-mail e telefone ficam de fora
+porque a rota é aberta a cliente.
+
+```json
+[
+  { "id": 2, "nome": "João" },
+  { "id": 3, "nome": "Pedro" }
+]
+```
+
+| Status | `codigo` | Quando |
+|---|---|---|
+| 401 | `NAO_AUTENTICADO` | Token ausente, inválido ou expirado |
+
 ---
 
 # Clientes (Fase 3)

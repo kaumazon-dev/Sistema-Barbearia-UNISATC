@@ -6,7 +6,7 @@ from app.core.security import (
     gerar_hash,
     verificar_senha,
 )
-from app.models.usuario import PAPEL_CLIENTE, Usuario
+from app.models.usuario import PAPEL_BARBEIRO, PAPEL_CLIENTE, Usuario
 
 # E-mail inexistente, senha errada e usuario desativado devolvem esta mesma
 # mensagem: diferenciar informaria quais e-mails existem.
@@ -60,3 +60,10 @@ class AuthService:
         if papel is None:
             return self.repositorio.get_all()
         return self.repositorio.listar_por_papel(papel)
+
+    def listar_barbeiros(self):
+        """Barbeiros ativos, para quem marca horario escolher com quem.
+
+        Barbeiro desativado nao aceita agendamento novo, entao nem aparece.
+        """
+        return self.repositorio.listar_ativos_por_papel(PAPEL_BARBEIRO)

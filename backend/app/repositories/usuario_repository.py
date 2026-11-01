@@ -15,6 +15,14 @@ class UsuarioRepository(BaseRepository):
         consulta = db.select(self.model).where(self.model.papel == papel)
         return db.session.execute(consulta).scalars().all()
 
+    def listar_ativos_por_papel(self, papel):
+        consulta = (
+            db.select(self.model)
+            .where(self.model.papel == papel, self.model.ativo.is_(True))
+            .order_by(self.model.nome, self.model.id)
+        )
+        return db.session.execute(consulta).scalars().all()
+
     def buscar_por_papel(self, papel, busca=None, ativo=None, pagina=1, por_pagina=20):
         """Lista paginada de um papel, com busca por nome ou telefone (RF08)."""
         consulta = db.select(self.model).where(self.model.papel == papel)

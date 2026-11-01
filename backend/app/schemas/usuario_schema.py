@@ -68,6 +68,14 @@ class UsuarioSchema(Schema):
     criado_em = fields.DateTime()
 
 
+class UsuarioResumoSchema(Schema):
+    """So id e nome: GET /auth/barbeiros e aberta a cliente, que nao precisa
+    do e-mail nem do telefone do barbeiro."""
+
+    id = fields.Integer()
+    nome = fields.String()
+
+
 class UsuarioFiltroSchema(Schema):
     """Filtros de GET /auth/usuarios.
 

@@ -9,7 +9,7 @@ import pytest
 
 from app.core.exceptions import Conflito, NaoAutorizada
 from app.core.security import gerar_hash
-from app.models.usuario import PAPEL_CLIENTE, Usuario
+from app.models.usuario import PAPEL_BARBEIRO, PAPEL_CLIENTE, Usuario
 from app.services import auth_service
 from app.services.auth_service import (
     MENSAGEM_CREDENCIAIS_INVALIDAS,
@@ -42,6 +42,13 @@ class RepositorioFalso:
 
     def listar_por_papel(self, papel):
         return [usuario for usuario in self.usuarios if usuario.papel == papel]
+
+    def listar_ativos_por_papel(self, papel):
+        return [
+            usuario
+            for usuario in self.usuarios
+            if usuario.papel == papel and usuario.ativo
+        ]
 
     def create(self, entidade):
         entidade.id = self.proximo_id
@@ -160,3 +167,14 @@ def test_email_inexistente_e_senha_errada_dao_a_mesma_mensagem():
 
     assert erro_senha.value.mensagem == erro_email.value.mensagem
     assert erro_senha.value.mensagem == MENSAGEM_CREDENCIAIS_INVALIDAS
+
+
+def test_listar_barbeiros_pede_so_os_ativos_de_papel_barbeiro():
+    barbeiro = construir_usuario(email="b@exemplo.com")
+    barbeiro.papel = PAPEL_BARBEIRO
+    desativado = construir_usuario(email="d@exemplo.com", ativo=False)
+    desativado.papel = PAPEL_BARBEIRO
+    cliente = construir_usuario(email="c@exemplo.com")
+    servico = AuthService(RepositorioFalso([barbeiro, desativado, cliente]))
+
+    assert servico.listar_barbeiros() == [barbeiro]
