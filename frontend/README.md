@@ -31,9 +31,13 @@ Abra <http://localhost:5173>. O Vite repassa `/api` para `http://localhost:5000`
 
 ### Produção fora do compose (Vercel)
 
-Defina `VITE_API_URL` com a URL completa da API, por exemplo
-`https://barbearia-api.onrender.com/api/v1`, e libere a origem do front em
-`CORS_ORIGINS` no backend.
+No ar em <https://nextbarber-blush.vercel.app>. O Vercel serve o build e o
+`vercel.json` repassa `/api/*` para a API no Render (rewrite). Assim o front
+continua falando com a própria origem, como no Vite e no nginx.
+
+Para apontar o front direto para outra API sem o rewrite, defina
+`VITE_API_URL` no build (ex.: `https://barbearia-api-voje.onrender.com/api/v1`)
+e libere a origem do front em `CORS_ORIGINS` no backend.
 
 ## Regras do front
 
