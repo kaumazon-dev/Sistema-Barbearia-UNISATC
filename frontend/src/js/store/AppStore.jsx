@@ -131,6 +131,13 @@ export function AppProvider({ children }) {
       cancelarAgendamento: (item) =>
         tentar(() => agendamentosApi.cancelar(item.id), 'Horário cancelado.'),
 
+      // usuarios: o papel novo vai no token do proximo login dele
+      alterarPapel: (usuario, papel, rotulo) =>
+        tentar(
+          () => authApi.alterarPapel(usuario.id, papel),
+          `${usuario.nome} agora é ${rotulo}. Vale a partir do próximo login.`
+        ),
+
       // clientes
       salvarCliente: (id, dados) =>
         id
