@@ -23,6 +23,11 @@ def limpar_entrada(dados):
     return dados
 
 
+def validar_bytes_da_senha(senha):
+    if len(senha.encode("utf-8")) > LIMITE_BYTES_SENHA:
+        raise ValidationError(f"A senha nao pode passar de {LIMITE_BYTES_SENHA} bytes.")
+
+
 class UsuarioCadastroSchema(Schema):
     # Sem o campo papel de proposito: se ele viesse no corpo da requisicao,
     # qualquer pessoa se cadastraria como admin.
@@ -41,10 +46,7 @@ class UsuarioCadastroSchema(Schema):
 
     @validates("senha")
     def validar_tamanho_em_bytes(self, senha, **kwargs):
-        if len(senha.encode("utf-8")) > LIMITE_BYTES_SENHA:
-            raise ValidationError(
-                f"A senha nao pode passar de {LIMITE_BYTES_SENHA} bytes."
-            )
+        validar_bytes_da_senha(senha)
 
 
 class LoginSchema(Schema):
@@ -103,3 +105,26 @@ class AlterarPapelSchema(Schema):
     """
 
     papel = fields.String(required=True, validate=validate.OneOf(PAPEIS))
+
+
+class EsqueciSenhaSchema(Schema):
+    """Corpo de POST /auth/esqueci-senha."""
+
+    email = fields.Email(required=True)
+
+    @pre_load
+    def normalizar(self, dados, **kwargs):
+        return limpar_entrada(dados)
+
+
+class RedefinirSenhaSchema(Schema):
+    """Corpo de POST /auth/redefinir-senha. Mesmas regras de senha do cadastro."""
+
+    token = fields.String(required=True, validate=validate.Length(min=1, max=500))
+    senha = fields.String(
+        required=True, load_only=True, validate=validate.Length(min=8)
+    )
+
+    @validates("senha")
+    def validar_tamanho_em_bytes(self, senha, **kwargs):
+        validar_bytes_da_senha(senha)

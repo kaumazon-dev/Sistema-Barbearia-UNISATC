@@ -62,6 +62,21 @@
   font-size: 13px;
 }
 
+.login__ok {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  background: var(--green-tint);
+  color: var(--green);
+  font-size: 13px;
+}
+
+.login__esqueci {
+  display: block;
+  margin: -6px 0 14px auto;
+  font-size: 13px;
+}
+
 .login__botao {
   width: 100%;
   justify-content: center;

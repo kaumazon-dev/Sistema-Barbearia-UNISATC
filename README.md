@@ -19,7 +19,7 @@ e dashboard com faturamento, atendimentos e taxa de cancelamento.
 
 | Módulo | O que faz |
 |---|---|
-| **Autenticação** | Cadastro, login com JWT, senha em hash (bcrypt) e permissão por papel: admin, barbeiro e cliente. |
+| **Autenticação** | Cadastro, login com JWT, senha em hash (bcrypt), permissão por papel (admin, barbeiro e cliente) e "esqueci minha senha" com link por e-mail assinado, de uso único e com validade de 30 min. |
 | **Clientes e serviços** | CRUD com paginação e busca. Nada é apagado de verdade, só desativado, para não perder histórico. |
 | **Agenda** | Criar, listar por dia e barbeiro, remarcar, concluir e cancelar. O fim é calculado pela soma das durações dos serviços e **nenhum agendamento se sobrepõe a outro do mesmo barbeiro** (checado no service e garantido no banco por uma `EXCLUDE constraint`, que segura até duas requisições simultâneas). |
 | **Estoque** | Produtos, entradas e saídas. A quantidade só muda junto com a movimentação, na mesma transação, e o histórico é imutável (um trigger no Postgres recusa `UPDATE` e `DELETE`). Alerta de produto no mínimo ou abaixo dele. |

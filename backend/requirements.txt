@@ -18,6 +18,9 @@ tzdata==2025.2
 # Autenticação
 Flask-JWT-Extended==4.7.4
 bcrypt==5.0.0
+# Token assinado do "esqueci minha senha" (ja vem com o Flask; fixado aqui
+# porque o codigo importa direto)
+itsdangerous==2.2.0
 
 # Front-end
 Flask-Cors==6.0.5

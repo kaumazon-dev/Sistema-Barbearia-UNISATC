@@ -45,3 +45,15 @@ services:
       # O ProdConfig recusa subir sem ela e recusa "*".
       - key: CORS_ORIGINS
         sync: false
+      # Esqueci minha senha: SMTP que envia o link. Sem MAIL_SERVIDOR o link so
+      # aparece no log da API. O link aponta para a 1a origem do CORS_ORIGINS.
+      - key: MAIL_SERVIDOR
+        sync: false
+      - key: MAIL_PORTA
+        value: "587"
+      - key: MAIL_USUARIO
+        sync: false
+      - key: MAIL_SENHA
+        sync: false
+      - key: MAIL_REMETENTE
+        sync: false

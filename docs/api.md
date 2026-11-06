@@ -173,6 +173,56 @@ e-mail não existe, o service roda uma verificação de senha descartável antes
 recusar. Sem isso a resposta sairia em 2 ms contra 200 ms do caminho normal, e o
 tempo entregaria quais e-mails estão cadastrados mesmo com a mensagem igual.
 
+## POST /auth/esqueci-senha
+
+Pública. Pede um link para criar uma senha nova.
+
+```json
+{ "email": "joao@exemplo.com" }
+```
+
+Resposta `202`, **sempre a mesma**, exista o e-mail ou não:
+
+```json
+{ "mensagem": "Se o e-mail estiver cadastrado, você receberá um link para redefinir a senha." }
+```
+
+Responder "e-mail não encontrado" contaria a qualquer um quem tem conta (a mesma
+regra do login). Conta desativada também não recebe link.
+
+O e-mail traz `<FRONTEND_URL>/?redefinir=<token>`. O token:
+
+- é **assinado** com a `SECRET_KEY` (itsdangerous), não fica guardado no banco;
+- **expira** em 30 minutos (`REDEFINIR_SENHA_EXPIRA_MINUTOS`);
+- vale **uma vez só**: ele carrega uma impressão do hash da senha atual, e quando a
+  senha muda a impressão deixa de conferir.
+
+Sem `MAIL_SERVIDOR` configurado o e-mail não sai: o conteúdo (com o link) é
+escrito no log do Flask. É o comportamento de dev e dos testes.
+
+| Status | `codigo` | Quando |
+|---|---|---|
+| 422 | `DADOS_INVALIDOS` | E-mail ausente ou malformado |
+
+## POST /auth/redefinir-senha
+
+Pública. Grava a senha nova a partir do token do link.
+
+```json
+{ "token": "eyJpZCI6MSwiaW1wcmVzc2FvIjoi...", "senha": "senha-nova-123" }
+```
+
+Resposta `200`:
+
+```json
+{ "mensagem": "Senha redefinida. Entre com a senha nova." }
+```
+
+| Status | `codigo` | Quando |
+|---|---|---|
+| 422 | `REGRA_VIOLADA` | Token inválido, adulterado, expirado, já usado, ou conta desativada |
+| 422 | `DADOS_INVALIDOS` | Token ausente, ou senha fora da regra do cadastro (8 caracteres a 72 bytes) |
+
 ## GET /auth/me
 
 Perfil do usuário autenticado. Exige token, qualquer papel.
