@@ -4,6 +4,12 @@
   "installCommand": "npm ci",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "rewrites": [
+    {
+      "source": "/api/:caminho*",
+      "destination": "https://barbearia-api-voje.onrender.com/api/:caminho*"
+    }
+  ],
   "headers": [
     {
       "source": "/assets/(.*)",
