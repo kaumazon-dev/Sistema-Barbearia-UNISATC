@@ -39,6 +39,9 @@ services:
         generateValue: true
       - key: JWT_EXPIRA_MINUTOS
         value: "720"
+      # Popula o banco com o seed.py no primeiro deploy (idempotente).
+      - key: RODAR_SEED
+        value: "1"
       # URL do front no Vercel, sem barra no final (ex.: https://nextbarber.vercel.app).
       # O ProdConfig recusa subir sem ela e recusa "*".
       - key: CORS_ORIGINS
