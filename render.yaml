@@ -1,0 +1,45 @@
+# Blueprint do Render: cria o Postgres e a API de uma vez.
+# No painel: New > Blueprint > escolher este repositorio (branch main).
+#
+# O schema nao e criado a mao: o entrypoint.sh roda "flask db upgrade" a cada
+# deploy, entao as mesmas migrations do Git montam o banco de producao.
+
+databases:
+  - name: barbearia-db
+    plan: free
+    region: oregon
+    databaseName: barbearia
+    user: barbearia
+    # Rede interna do Render apenas; para rodar o seed.py da sua maquina,
+    # use a "External Database URL" do painel (o acesso externo continua
+    # liberado, protegido pela senha).
+
+services:
+  - type: web
+    name: barbearia-api
+    runtime: docker
+    plan: free
+    region: oregon
+    branch: main
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
+    # /health responde 503 se o banco cair: o Render so troca a versao no
+    # ar quando a nova responde 200.
+    healthCheckPath: /health
+    envVars:
+      - key: APP_ENV
+        value: prod
+      - key: DATABASE_URL
+        fromDatabase:
+          name: barbearia-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: JWT_EXPIRA_MINUTOS
+        value: "720"
+      # URL do front no Vercel, sem barra no final (ex.: https://nextbarber.vercel.app).
+      # O ProdConfig recusa subir sem ela e recusa "*".
+      - key: CORS_ORIGINS
+        sync: false
