@@ -8,6 +8,7 @@ from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 
 from app.core.exceptions import Conflito, NaoEncontrado, RegraDeNegocioViolada
 from app.core.fuso import FUSO_BARBEARIA
@@ -421,3 +422,53 @@ def test_listagem_por_dia_usa_o_dia_de_brasilia(service, repositorio):
     assert repositorio.ultimos_filtros["fim"] - repositorio.ultimos_filtros[
         "inicio"
     ] == timedelta(days=1)
+
+
+# --- corrida entre duas requisicoes (EXCLUDE constraint no banco) ---------------
+
+
+class _ErroDoPostgres(Exception):
+    def __init__(self, pgcode):
+        self.pgcode = pgcode
+
+
+def _repositorio_que_falha_ao_gravar(repositorio, pgcode):
+    """Simula a outra requisicao ocupando o horario entre a checagem e o commit."""
+
+    def falhar(entidade):
+        raise IntegrityError("INSERT", {}, _ErroDoPostgres(pgcode))
+
+    def desfazer():
+        repositorio.desfeito = True
+
+    repositorio.create = falhar
+    repositorio.update = falhar
+    repositorio.desfazer = desfazer
+    repositorio.desfeito = False
+
+
+def test_corrida_no_mesmo_horario_vira_conflito(service, repositorio):
+    _repositorio_que_falha_ao_gravar(repositorio, "23P01")
+
+    with pytest.raises(Conflito) as erro:
+        marcar(service, "10:00")
+
+    assert "acabou de ser ocupado na agenda de João" in erro.value.mensagem
+    assert repositorio.desfeito
+
+
+def test_corrida_ao_remarcar_tambem_vira_conflito(service, repositorio, existente):
+    _repositorio_que_falha_ao_gravar(repositorio, "23P01")
+
+    with pytest.raises(Conflito):
+        service.remarcar(existente.id, {"inicio": hora("16:00")}, ADMIN.id, PAPEL_ADMIN)
+    assert repositorio.desfeito
+
+
+def test_outra_violacao_de_integridade_nao_vira_conflito(service, repositorio):
+    """So o 23P01 (exclusao) e conflito de agenda; o resto e erro de verdade."""
+    _repositorio_que_falha_ao_gravar(repositorio, "23503")  # foreign key
+
+    with pytest.raises(IntegrityError):
+        marcar(service, "10:00")
+    assert repositorio.desfeito
