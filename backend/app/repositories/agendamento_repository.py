@@ -26,6 +26,17 @@ class AgendamentoRepository(BaseRepository):
         )
         return db.session.execute(consulta).scalars().all()
 
+    def contar_do_barbeiro_a_partir_de(self, barbeiro_id, instante, status):
+        """Quantos agendamentos do barbeiro, no status pedido, comecam em
+        `instante` ou depois. Quem decide o que isso significa e o service.
+        """
+        consulta = db.select(db.func.count()).where(
+            self.model.barbeiro_id == barbeiro_id,
+            self.model.inicio >= instante,
+            self.model.status == status,
+        )
+        return db.session.execute(consulta).scalar_one()
+
     def listar(
         self,
         inicio=None,

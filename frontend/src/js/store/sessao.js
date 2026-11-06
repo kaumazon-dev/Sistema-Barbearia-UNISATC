@@ -41,7 +41,7 @@ export function limparSessao() {
 
 /** Telas liberadas por papel. A primeira e a tela inicial do papel. */
 export const TELAS_POR_PAPEL = {
-  admin: ['dashboard', 'agendamentos', 'clientes', 'barbeiros', 'servicos', 'estoque', 'relatorios', 'configuracoes'],
+  admin: ['dashboard', 'agendamentos', 'clientes', 'barbeiros', 'usuarios', 'servicos', 'estoque', 'relatorios', 'configuracoes'],
   barbeiro: ['agendamentos', 'clientes', 'barbeiros', 'servicos', 'configuracoes'],
   cliente: ['agendamentos', 'servicos', 'configuracoes']
 };

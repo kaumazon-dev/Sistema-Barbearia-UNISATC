@@ -83,8 +83,9 @@ banco por requisição.
 
 Cadastro público. Cria sempre com `papel = "cliente"`.
 
-Para criar admin ou barbeiro use o `seed.py` (Fase 9) ou um endpoint restrito a
-admin. O campo `papel` **não** é aceito no corpo: se fosse, qualquer pessoa se
+Para criar admin ou barbeiro: o admin promove o usuário em
+`PATCH /auth/usuarios/<id>/papel` (o primeiro admin vem do `seed.py`).
+O campo `papel` **não** é aceito no corpo: se fosse, qualquer pessoa se
 cadastraria como admin.
 
 Corpo:
@@ -204,6 +205,38 @@ Resposta `200`: lista de objetos de usuário.
 
 Sem paginação: é uma rota administrativa de poucos registros. A listagem que
 cresce, a de clientes, é paginada (ver `GET /clientes`).
+
+## PATCH /auth/usuarios/&lt;id&gt;/papel
+
+Muda o papel de um usuário. **Exige papel `admin`.** É assim que o dono da
+barbearia decide quem é barbeiro ou administrador: o cadastro público sempre
+cria cliente.
+
+Corpo:
+
+```json
+{ "papel": "barbeiro" }
+```
+
+| Campo | Tipo | Obrigatório | Regra |
+|---|---|---|---|
+| `papel` | string | sim | `admin`, `barbeiro` ou `cliente`. Nenhum outro campo é aceito. |
+
+Regras de negócio:
+
+- O admin **não pode alterar o próprio papel**. Assim a barbearia nunca fica sem nenhum admin.
+- Um barbeiro com agendamento `agendado` daqui para frente **continua barbeiro**: remarque com outro barbeiro ou cancele antes. Horário passado ou cancelado não impede.
+- O papel novo vale **a partir do próximo login** do usuário. O token antigo continua com o papel antigo até expirar (ver "Como autenticar").
+
+Resposta `200`: o objeto de usuário com o papel novo.
+
+| Status | `codigo` | Quando |
+|---|---|---|
+| 401 | `NAO_AUTENTICADO` | Token ausente, inválido ou expirado |
+| 403 | `ACESSO_NEGADO` | O papel no token não é `admin` |
+| 404 | `NAO_ENCONTRADO` | Usuário não existe |
+| 422 | `DADOS_INVALIDOS` | `papel` ausente, fora dos três valores, ou campo desconhecido no corpo |
+| 422 | `REGRA_VIOLADA` | Alterar o próprio papel, ou tirar de barbeiro alguém com horário marcado |
 
 ## GET /auth/barbeiros
 

@@ -10,7 +10,10 @@ const tons = {
   'Em falta': 'red',
   'Em dia': 'green',
   Entrada: 'green',
-  Saída: 'amber'
+  Saída: 'amber',
+  Administrador: 'amber',
+  Barbeiro: 'blue',
+  Cliente: 'neutral'
 };
 
 export default function StatusBadge({ status }) {

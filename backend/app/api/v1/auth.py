@@ -3,8 +3,10 @@ from flask_jwt_extended import create_access_token
 
 from app.api.decoradores import rota_protegida, usuario_logado_id
 from app.models.usuario import PAPEL_ADMIN
+from app.repositories.agendamento_repository import AgendamentoRepository
 from app.repositories.usuario_repository import UsuarioRepository
 from app.schemas.usuario_schema import (
+    AlterarPapelSchema,
     LoginSchema,
     UsuarioCadastroSchema,
     UsuarioFiltroSchema,
@@ -12,6 +14,7 @@ from app.schemas.usuario_schema import (
     UsuarioSchema,
 )
 from app.services.auth_service import AuthService
+from app.services.usuario_service import UsuarioService
 
 blueprint_auth = Blueprint("auth", __name__, url_prefix="/auth")
 
@@ -21,10 +24,15 @@ schema_usuario = UsuarioSchema()
 schema_lista_usuarios = UsuarioSchema(many=True)
 schema_filtro = UsuarioFiltroSchema()
 schema_lista_resumo = UsuarioResumoSchema(many=True)
+schema_alterar_papel = AlterarPapelSchema()
 
 
 def obter_servico():
     return AuthService(UsuarioRepository())
+
+
+def obter_servico_usuarios():
+    return UsuarioService(UsuarioRepository(), AgendamentoRepository())
 
 
 @blueprint_auth.route("/register", methods=["POST"])
@@ -59,6 +67,16 @@ def listar_usuarios():
     filtros = schema_filtro.load(request.args.to_dict())
     usuarios = obter_servico().listar_usuarios(filtros["papel"])
     return jsonify(schema_lista_usuarios.dump(usuarios))
+
+
+@blueprint_auth.route("/usuarios/<int:usuario_id>/papel", methods=["PATCH"])
+@rota_protegida(PAPEL_ADMIN)
+def alterar_papel(usuario_id):
+    dados = schema_alterar_papel.load(request.get_json())
+    usuario = obter_servico_usuarios().alterar_papel(
+        usuario_id, dados["papel"], admin_id=usuario_logado_id()
+    )
+    return jsonify(schema_usuario.dump(usuario))
 
 
 @blueprint_auth.route("/barbeiros", methods=["GET"])

@@ -21,6 +21,12 @@ describe('telas por papel', () => {
     expect(podeAcessar('cliente', 'barbeiros')).toBe(false);
   });
 
+  it('so o admin gerencia usuarios e papeis', () => {
+    expect(podeAcessar('admin', 'usuarios')).toBe(true);
+    expect(podeAcessar('barbeiro', 'usuarios')).toBe(false);
+    expect(podeAcessar('cliente', 'usuarios')).toBe(false);
+  });
+
   it('papel desconhecido nao acessa nada', () => {
     expect(podeAcessar('hacker', 'agendamentos')).toBe(false);
   });

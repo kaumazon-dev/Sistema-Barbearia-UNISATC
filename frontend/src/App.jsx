@@ -7,6 +7,7 @@ import Dashboard from './pages/dashboard/Dashboard';
 import Agendamentos from './pages/agenda/Agendamentos';
 import Clientes from './pages/clientes/Clientes';
 import Barbeiros from './pages/barbeiros/Barbeiros';
+import Usuarios from './pages/usuarios/Usuarios';
 import Servicos from './pages/servicos/Servicos';
 import Estoque from './pages/estoque/Estoque';
 import Relatorios from './pages/relatorios/Relatorios';
@@ -19,6 +20,7 @@ const paginas = {
   agendamentos: Agendamentos,
   clientes: Clientes,
   barbeiros: Barbeiros,
+  usuarios: Usuarios,
   servicos: Servicos,
   estoque: Estoque,
   relatorios: Relatorios,

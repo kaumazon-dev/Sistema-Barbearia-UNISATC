@@ -94,3 +94,12 @@ class UsuarioFiltroSchema(Schema):
         if isinstance(dados, dict) and not dados.get("papel"):
             return {chave: valor for chave, valor in dados.items() if chave != "papel"}
         return dados
+
+
+class AlterarPapelSchema(Schema):
+    """Corpo de PATCH /auth/usuarios/<id>/papel. So o admin chega aqui.
+
+    OneOf antes do banco: papel fora do enum viraria 500 no Postgres.
+    """
+
+    papel = fields.String(required=True, validate=validate.OneOf(PAPEIS))
