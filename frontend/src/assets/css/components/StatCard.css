@@ -1,0 +1,78 @@
+.stat {
+  padding: 18px 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.stat:hover {
+  border-color: rgba(233, 162, 59, 0.3);
+  transform: translateY(-1px);
+}
+
+.stat__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.stat__label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+
+.stat__icon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-sm);
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border);
+  color: var(--gold);
+}
+
+.stat__value {
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  line-height: 1.05;
+}
+
+.stat__foot {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: nowrap;
+  gap: 7px;
+  font-size: 11px;
+  min-width: 0;
+}
+
+.stat__delta {
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.stat__delta--green {
+  color: var(--green);
+}
+
+.stat__delta--red {
+  color: var(--red);
+}
+
+.stat__hint {
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}

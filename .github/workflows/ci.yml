@@ -1,0 +1,77 @@
+# Roda a suite inteira a cada push e PR: os testes de servico (agenda e
+# estoque) sem banco, os de integracao contra um Postgres de verdade (o trigger
+# do historico imutavel so existe no Postgres) e os testes + build do front.
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+
+    services:
+      db:
+        image: postgres:18
+        env:
+          POSTGRES_USER: barbearia
+          POSTGRES_PASSWORD: barbearia
+          POSTGRES_DB: barbearia_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U barbearia -d barbearia_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      APP_ENV: test
+      DATABASE_URL_TEST: postgresql://barbearia:barbearia@localhost:5432/barbearia_test
+      SECRET_KEY: chave-so-para-o-ci
+      JWT_SECRET_KEY: chave-jwt-so-para-o-ci-com-32-bytes-ou-mais
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Testes unitarios (services de agenda, estoque e demais)
+        run: python -m pytest tests/unit -q
+
+      - name: Testes de integracao (rotas + Postgres)
+        run: python -m pytest tests/integration -q
+
+  frontend:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+      - run: npm test
+      - run: npm run build

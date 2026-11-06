@@ -1,0 +1,115 @@
+// DER — Sistema de Gerenciamento de Barbearias
+// Fonte do diagrama em docs/der.png
+//
+// Como gerar o PNG:
+//   1. Abrir https://dbdiagram.io/d
+//   2. Colar o conteúdo deste arquivo no painel da esquerda
+//   3. Export > PNG, salvar como docs/der.png
+//
+// Este arquivo é a fonte de verdade do desenho. Ao mudar o modelo,
+// edite aqui e reexporte o PNG — nunca edite o PNG isoladamente.
+//
+// Atenção: este DBML documenta a intenção do modelo. O schema real
+// nasce dos models SQLAlchemy + migrations (ver CLAUDE.md seção 5).
+
+Enum usuario_papel {
+  admin
+  barbeiro
+  cliente
+}
+
+Enum agendamento_status {
+  agendado
+  concluido
+  cancelado
+}
+
+Enum movimentacao_tipo {
+  entrada
+  saida
+}
+
+Table usuario {
+  id integer [pk, increment]
+  nome varchar(120) [not null]
+  email varchar(160) [unique, not null, note: 'usado como login']
+  senha_hash varchar(255) [not null, note: 'nunca senha em texto puro']
+  telefone varchar(20)
+  papel usuario_papel [not null]
+  ativo boolean [not null, default: true, note: 'desativa sem apagar histórico']
+  criado_em timestamp [not null, default: `now()`]
+
+  Note: 'Admin, barbeiro e cliente na mesma tabela, separados por papel.'
+}
+
+Table servico {
+  id integer [pk, increment]
+  nome varchar(120) [not null]
+  duracao_minutos integer [not null, note: 'base do cálculo de fim e de conflito']
+  preco decimal(10,2) [not null, note: 'preço vigente; o histórico fica em agendamento_servico']
+  ativo boolean [not null, default: true]
+}
+
+Table agendamento {
+  id integer [pk, increment]
+  cliente_id integer [not null]
+  barbeiro_id integer [not null]
+  inicio timestamp [not null]
+  fim timestamp [not null, note: 'gravado, não calculado na leitura']
+  status agendamento_status [not null, default: 'agendado']
+  observacao text
+  criado_em timestamp [not null, default: `now()`]
+
+  indexes {
+    (barbeiro_id, inicio) [name: 'idx_agendamento_barbeiro_inicio']
+  }
+
+  Note: 'Nenhum agendamento do mesmo barbeiro pode se sobrepor (RF15 / RN01). Cancelado não bloqueia horário.'
+}
+
+Table agendamento_servico {
+  agendamento_id integer [not null]
+  servico_id integer [not null]
+  preco_cobrado decimal(10,2) [not null, note: 'cópia de servico.preco na marcação']
+
+  indexes {
+    (agendamento_id, servico_id) [pk]
+  }
+
+  Note: 'N:N. Um agendamento pode ter corte + barba. A duração total é a soma dos serviços.'
+}
+
+Table produto {
+  id integer [pk, increment]
+  nome varchar(120) [not null]
+  unidade varchar(10) [not null, note: 'un, ml, g']
+  quantidade_atual decimal(10,2) [not null, default: 0]
+  estoque_minimo decimal(10,2) [not null, default: 0]
+  ativo boolean [not null, default: true]
+
+  Note: 'quantidade_atual nunca é alterada direto — só por movimentacao_estoque (RN04).'
+}
+
+Table movimentacao_estoque {
+  id integer [pk, increment]
+  produto_id integer [not null]
+  usuario_id integer [not null, note: 'quem registrou']
+  tipo movimentacao_tipo [not null]
+  quantidade decimal(10,2) [not null, note: 'sempre positiva; o sinal vem de tipo']
+  motivo varchar(160)
+  criado_em timestamp [not null, default: `now()`]
+
+  indexes {
+    (produto_id, criado_em) [name: 'idx_movimentacao_produto_data']
+  }
+}
+
+// Relacionamentos
+// usuario aparece duas vezes ligado a agendamento: uma como cliente, outra como barbeiro.
+
+Ref: agendamento.cliente_id > usuario.id
+Ref: agendamento.barbeiro_id > usuario.id
+Ref: agendamento_servico.agendamento_id > agendamento.id
+Ref: agendamento_servico.servico_id > servico.id
+Ref: movimentacao_estoque.produto_id > produto.id
+Ref: movimentacao_estoque.usuario_id > usuario.id
