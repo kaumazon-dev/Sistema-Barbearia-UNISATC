@@ -20,7 +20,6 @@ services:
     runtime: docker
     plan: free
     region: oregon
-    branch: main
     dockerContext: ./backend
     dockerfilePath: ./backend/Dockerfile
     # /health responde 503 se o banco cair: o Render so troca a versao no
