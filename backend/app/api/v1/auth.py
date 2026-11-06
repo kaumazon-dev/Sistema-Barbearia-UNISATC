@@ -2,7 +2,17 @@ from flask import Blueprint, current_app, jsonify, request
 from flask_jwt_extended import create_access_token
 
 from app.api.decoradores import rota_protegida, usuario_logado_id
+from app.core.limites import (
+    LIMITE_CADASTRO_IP,
+    LIMITE_ESQUECI_EMAIL,
+    LIMITE_ESQUECI_IP,
+    LIMITE_LOGIN_EMAIL,
+    LIMITE_LOGIN_IP,
+    LIMITE_REDEFINIR_IP,
+    chave_por_email,
+)
 from app.core.security import TokenRedefinicaoSenha
+from app.extensions import limiter
 from app.models.usuario import PAPEL_ADMIN
 from app.repositories.agendamento_repository import AgendamentoRepository
 from app.repositories.usuario_repository import UsuarioRepository
@@ -58,6 +68,7 @@ def obter_servico_usuarios():
 
 
 @blueprint_auth.route("/register", methods=["POST"])
+@limiter.limit(LIMITE_CADASTRO_IP)
 def registrar():
     dados = schema_cadastro.load(request.get_json())
     usuario = obter_servico().cadastrar(dados)
@@ -65,6 +76,8 @@ def registrar():
 
 
 @blueprint_auth.route("/login", methods=["POST"])
+@limiter.limit(LIMITE_LOGIN_IP)
+@limiter.limit(LIMITE_LOGIN_EMAIL, key_func=chave_por_email)
 def login():
     dados = schema_login.load(request.get_json())
     usuario = obter_servico().autenticar(dados["email"], dados["senha"])
@@ -77,6 +90,8 @@ def login():
 
 
 @blueprint_auth.route("/esqueci-senha", methods=["POST"])
+@limiter.limit(LIMITE_ESQUECI_IP)
+@limiter.limit(LIMITE_ESQUECI_EMAIL, key_func=chave_por_email)
 def esqueci_senha():
     dados = schema_esqueci_senha.load(request.get_json())
     obter_servico_recuperacao().solicitar(dados["email"])
@@ -85,6 +100,7 @@ def esqueci_senha():
 
 
 @blueprint_auth.route("/redefinir-senha", methods=["POST"])
+@limiter.limit(LIMITE_REDEFINIR_IP)
 def redefinir_senha():
     dados = schema_redefinir_senha.load(request.get_json())
     obter_servico_recuperacao().redefinir(dados["token"], dados["senha"])

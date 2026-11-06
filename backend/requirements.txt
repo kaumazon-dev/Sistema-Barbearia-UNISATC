@@ -21,6 +21,8 @@ bcrypt==5.0.0
 # Token assinado do "esqueci minha senha" (ja vem com o Flask; fixado aqui
 # porque o codigo importa direto)
 itsdangerous==2.2.0
+# Limite de tentativas nas rotas publicas de autenticacao
+Flask-Limiter==4.1.1
 
 # Front-end
 Flask-Cors==6.0.5

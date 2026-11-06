@@ -57,3 +57,8 @@ services:
         sync: false
       - key: MAIL_REMETENTE
         sync: false
+      # Limite de tentativas: navegador -> Vercel (rewrite) -> proxy do Render
+      # -> API. Sao 2 proxies nossos; o ProxyFix pega o IP real do cliente no
+      # X-Forwarded-For. Se um dia o front chamar o Render direto, mude para 1.
+      - key: PROXIES_CONFIAVEIS
+        value: "2"

@@ -79,6 +79,35 @@ usuário **não** invalida o token que ele já tem em mãos. O papel novo passa 
 valer no próximo login. É uma troca aceita de propósito — evita uma consulta ao
 banco por requisição.
 
+## Limite de tentativas (429)
+
+As rotas públicas de autenticação têm limite de tentativas (Flask-Limiter).
+Passou do limite, a resposta é `429`, com o cabeçalho `Retry-After` (segundos
+até liberar):
+
+```json
+{ "erro": { "codigo": "MUITAS_TENTATIVAS", "mensagem": "Muitas tentativas em pouco tempo. Aguarde um pouco e tente novamente." } }
+```
+
+| Rota | Por IP | Por e-mail do corpo |
+|---|---|---|
+| `POST /auth/login` | 30 por minuto | 10 a cada 15 minutos |
+| `POST /auth/register` | 10 por hora | — |
+| `POST /auth/esqueci-senha` | 10 por hora | 3 por hora |
+| `POST /auth/redefinir-senha` | 10 a cada 15 minutos | — |
+
+O limite por e-mail segura ataque a **uma conta** vindo de vários IPs (força
+bruta de senha, ou lotar a caixa de alguém com links). O e-mail é normalizado
+(minúsculas, sem espaços) antes de contar, e conta exista a conta ou não, então o
+`429` não revela quem tem cadastro.
+
+Troca aceita: quem tenta adivinhar a senha de uma conta também bloqueia o dono
+dela por até 15 minutos.
+
+Os contadores ficam na memória de cada processo (`memory://`). Com 2 workers do
+gunicorn o limite real pode chegar ao dobro; um Redis em `RATELIMIT_STORAGE_URI`
+faz todos contarem juntos.
+
 ## POST /auth/register
 
 Cadastro público. Cria sempre com `papel = "cliente"`.

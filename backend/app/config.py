@@ -29,6 +29,13 @@ def ler_inteiro_positivo(valor, padrao):
         return padrao
     return numero if numero > 0 else padrao
 
+def ler_inteiro_nao_negativo(valor, padrao):
+    try:
+        numero = int(valor)
+    except (TypeError, ValueError):
+        return padrao
+    return numero if numero >= 0 else padrao
+
 def ler_booleano(valor, padrao):
     if valor is None or valor == "":
         return padrao
@@ -57,6 +64,17 @@ class Config:
     REDEFINIR_SENHA_EXPIRA_MINUTOS = ler_inteiro_positivo(
         os.environ.get("REDEFINIR_SENHA_EXPIRA_MINUTOS"), 30
     )
+
+    # Limite de tentativas (Flask-Limiter le as chaves RATELIMIT_*).
+    # memory:// conta em cada processo: com 2 workers do gunicorn o limite
+    # real fica ate 2x maior. Para contar junto, use um Redis:
+    # RATELIMIT_STORAGE_URI=redis://host:6379
+    RATELIMIT_STORAGE_URI = os.environ.get("RATELIMIT_STORAGE_URI") or "memory://"
+    RATELIMIT_ENABLED = ler_booleano(os.environ.get("RATELIMIT_ATIVO"), True)
+    # Manda Retry-After e X-RateLimit-* na resposta.
+    RATELIMIT_HEADERS_ENABLED = True
+    # Quantos proxies nossos ficam na frente da API (ver ProxyFix no create_app).
+    PROXIES_CONFIAVEIS = ler_inteiro_nao_negativo(os.environ.get("PROXIES_CONFIAVEIS"), 0)
 
 class DevConfig(Config):
     DEBUG = True

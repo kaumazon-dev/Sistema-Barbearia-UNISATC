@@ -1,6 +1,7 @@
 from marshmallow import ValidationError
-from werkzeug.exceptions import HTTPException
+from werkzeug.exceptions import HTTPException, TooManyRequests
 from app.core.exceptions import (ErroNegocio, NaoEncontrado, RegraDeNegocioViolada, NaoAutorizada, AcessoNegado, Conflito)
+from app.core.limites import MENSAGEM_LIMITE
 
 
 
@@ -23,6 +24,13 @@ def registrar_error_handlers(app):
             }
         }
         return corpo, 422
+
+    @app.errorhandler(TooManyRequests)
+    def tratar_limite_excedido(erro):
+        # Mais especifico que o HTTPException abaixo, entao o Flask escolhe
+        # este. Sem ele a mensagem sairia em ingles ("10 per 1 hour").
+        corpo = {"erro": {"codigo": "MUITAS_TENTATIVAS", "mensagem": MENSAGEM_LIMITE}}
+        return corpo, 429
 
     @app.errorhandler(HTTPException)
     def tratar_erro_http(erro):

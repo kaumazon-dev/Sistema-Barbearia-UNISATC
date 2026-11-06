@@ -11,7 +11,7 @@ import pytest
 os.environ["APP_ENV"] = "test"
 
 from app import create_app  # noqa: E402
-from app.extensions import db  # noqa: E402
+from app.extensions import db, limiter  # noqa: E402
 from app.models.usuario import (  # noqa: E402
     PAPEL_ADMIN,
     PAPEL_BARBEIRO,
@@ -42,6 +42,8 @@ def banco_limpo(app):
     tabelas = ", ".join(f'"{t.name}"' for t in db.metadata.sorted_tables)
     db.session.execute(db.text(f"TRUNCATE TABLE {tabelas}"))
     db.session.commit()
+    # Zera os contadores do rate limit: um teste nao gasta o limite do outro.
+    limiter.reset()
 
 
 @pytest.fixture
