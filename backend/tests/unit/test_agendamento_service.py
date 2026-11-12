@@ -472,3 +472,38 @@ def test_outra_violacao_de_integridade_nao_vira_conflito(service, repositorio):
     with pytest.raises(IntegrityError):
         marcar(service, "10:00")
     assert repositorio.desfeito
+
+
+# --- notificacao ao criar ------------------------------------------------------
+
+
+class NotificadorFalso:
+    def __init__(self):
+        self.criados = []
+
+    def agendamento_criado(self, agendamento):
+        self.criados.append(agendamento)
+
+
+@pytest.fixture
+def notificador(service):
+    notificador = NotificadorFalso()
+    service.notificador = notificador
+    return notificador
+
+
+def test_criar_notifica_o_agendamento_gravado(service, notificador):
+    agendamento = marcar(service, "13:30")
+    assert notificador.criados == [agendamento]
+    assert agendamento.id is not None
+
+
+def test_conflito_nao_notifica(service, existente, notificador):
+    with pytest.raises(Conflito):
+        marcar(service, "14:00")
+    assert notificador.criados == []
+
+
+def test_remarcar_nao_notifica_como_criacao(service, existente, notificador):
+    service.remarcar(existente.id, {"inicio": hora("16:00")}, ADMIN.id, PAPEL_ADMIN)
+    assert notificador.criados == []

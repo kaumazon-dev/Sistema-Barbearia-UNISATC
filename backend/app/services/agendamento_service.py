@@ -53,11 +53,13 @@ class AgendamentoService:
     agendamento de outra pessoa simplesmente nao existe.
     """
 
-    def __init__(self, repositorio, servico_service, usuario_repositorio, relogio=agora):
+    def __init__(self, repositorio, servico_service, usuario_repositorio, relogio=agora,
+                 notificador=None):
         self.repositorio = repositorio
         self.servico_service = servico_service
         self.usuario_repositorio = usuario_repositorio
         self.relogio = relogio
+        self.notificador = notificador
 
     def listar(self, usuario_id, papel, dia=None, barbeiro_id=None, cliente_id=None,
                status=None, pagina=1, por_pagina=20):
@@ -108,7 +110,11 @@ class AgendamentoService:
                 AgendamentoServico(servico=s, preco_cobrado=s.preco) for s in servicos
             ],
         )
-        return self._gravar(self.repositorio.create, agendamento, barbeiro)
+        agendamento = self._gravar(self.repositorio.create, agendamento, barbeiro)
+        # Depois do commit: so avisa o que de fato ficou gravado.
+        if self.notificador is not None:
+            self.notificador.agendamento_criado(agendamento)
+        return agendamento
 
     def remarcar(self, agendamento_id, dados, usuario_id, papel):
         """Novo inicio (e opcionalmente outro barbeiro), mesma duracao.
