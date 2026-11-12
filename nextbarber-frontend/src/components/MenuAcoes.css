@@ -1,0 +1,74 @@
+.menu-acoes {
+  position: relative;
+  display: inline-block;
+}
+
+.menu-acoes__botao {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-sm);
+  color: var(--text-3);
+  font-size: 11px;
+  letter-spacing: 1px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.menu-acoes__botao:hover,
+.menu-acoes__botao[aria-expanded='true'] {
+  background: var(--bg-elevated);
+  color: var(--text);
+}
+
+.menu-acoes__lista {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 20;
+  min-width: 194px;
+  padding: 6px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
+  animation: menu-entra 0.14s ease;
+}
+
+.menu-acoes__item {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  text-align: left;
+  font-size: 12.5px;
+  color: var(--text-2);
+  white-space: nowrap;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.menu-acoes__item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+}
+
+.menu-acoes__item.is-perigo {
+  color: var(--red);
+}
+
+.menu-acoes__item.is-perigo:hover {
+  background: var(--red-tint);
+}
+
+.menu-acoes__hr {
+  margin: 5px 4px;
+  border: none;
+  border-top: 1px solid var(--border-soft);
+}
+
+@keyframes menu-entra {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-acoes__lista { animation: none; }
+}

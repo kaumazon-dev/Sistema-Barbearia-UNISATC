@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 from flask_jwt_extended import get_jwt
 from marshmallow import ValidationError
 
@@ -15,6 +15,7 @@ from app.schemas.agendamento_schema import (
 )
 from app.schemas.paginacao_schema import montar_pagina
 from app.services.agendamento_service import AgendamentoService
+from app.services.notificacao_agendamento import NotificadorAgendamento
 from app.services.servico_service import ServicoService
 
 blueprint_agendamentos = Blueprint("agendamentos", __name__, url_prefix="/agendamentos")
@@ -31,6 +32,7 @@ def obter_servico():
         AgendamentoRepository(),
         ServicoService(ServicoRepository()),
         UsuarioRepository(),
+        notificador=NotificadorAgendamento(current_app.extensions["enviador_email"]),
     )
 
 

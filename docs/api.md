@@ -704,6 +704,12 @@ Resposta `200`: objeto de agendamento.
 
 Resposta `201`: objeto de agendamento, com status `agendado`.
 
+Depois de gravar, o sistema manda dois e-mails: a **confirmação para o cliente**
+e o **aviso de horário novo para o barbeiro**, com data, horário, serviços,
+total e observação. Conflito ou erro de validação não mandam nada. Falha no
+envio não desfaz o agendamento nem muda a resposta (fica só no log). Sem
+`MAIL_SERVIDOR`, os e-mails vão para o log do Flask, como no "esqueci minha senha".
+
 | Status | `codigo` | Quando |
 |---|---|---|
 | 404 | `NAO_ENCONTRADO` | Cliente, barbeiro ou serviço não existe (ou tem outro papel) |

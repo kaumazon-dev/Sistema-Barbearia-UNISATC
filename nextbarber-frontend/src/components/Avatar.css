@@ -1,0 +1,22 @@
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.avatar--gold {
+  background: linear-gradient(140deg, #3a2c16, #22201d);
+  color: var(--gold-soft);
+  border: 1px solid rgba(233, 162, 59, 0.32);
+}
+
+.avatar--neutral {
+  background: linear-gradient(140deg, #26262b, #1b1b1f);
+  color: var(--text-2);
+  border: 1px solid var(--border);
+}

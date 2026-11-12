@@ -4,6 +4,7 @@ from decimal import Decimal
 import pytest
 from sqlalchemy.exc import IntegrityError
 
+from app.core.email import EnviadorEmailLog
 from app.core.fuso import FUSO_BARBEARIA
 from app.extensions import db
 from app.models.agendamento import Agendamento
@@ -254,3 +255,37 @@ def test_horarios_sao_gravados_com_fuso(client, admin, cenario):
     assert gravado.inicio == hora("13:30")
     assert gravado.inicio.utcoffset() is not None
     assert gravado.inicio.astimezone(timezone.utc).hour == 16
+
+
+# --- notificacao por e-mail -----------------------------------------------------
+
+
+@pytest.fixture
+def caixa_de_email(app):
+    anterior = app.extensions["enviador_email"]
+    enviador = EnviadorEmailLog()
+    app.extensions["enviador_email"] = enviador
+    yield enviador.enviados
+    app.extensions["enviador_email"] = anterior
+
+
+def test_criar_manda_email_ao_cliente_e_ao_barbeiro(client, admin, cenario, caixa_de_email):
+    resposta = marcar(client, admin, cenario, "13:30")
+
+    assert resposta.status_code == 201
+    assert [e["para"] for e in caixa_de_email] == [
+        cenario["ana"].email,
+        cenario["joao"].email,
+    ]
+    assert f"Data: {DIA:%d/%m/%Y}" in caixa_de_email[0]["corpo"]
+    assert "Horário: 13:30 às 14:30" in caixa_de_email[0]["corpo"]
+
+
+def test_conflito_nao_manda_email(client, admin, cenario, caixa_de_email):
+    marcar(client, admin, cenario, "13:30")
+    caixa_de_email.clear()
+
+    resposta = marcar(client, admin, cenario, "14:00", cliente="bia")
+
+    assert resposta.status_code == 409
+    assert caixa_de_email == []

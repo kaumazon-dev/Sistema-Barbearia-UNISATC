@@ -1,0 +1,26 @@
+{
+  "name": "nextbarber-frontend",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Modelo de interface (mockup navegavel) do NextBarber - Sistema de Barbearia. Front-end avulso, sem login e sem integracao com backend.",
+  "type": "module",
+  "main": "servidor.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node servidor.js",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "build:html": "vite build --config vite.config.standalone.js && node scripts/inline.mjs"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "vite": "^5.4.8"
+  }
+}
